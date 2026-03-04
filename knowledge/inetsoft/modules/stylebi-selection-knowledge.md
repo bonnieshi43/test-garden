@@ -66,6 +66,12 @@ Selection components can be used in the following environments:
 - User selections in `Selection List` / `Selection Tree` drive **linked filtering** on other `DataView` components.
 - By adjusting selection criteria, the user influences what data is displayed in related views.
 
+### Popup Interaction
+
+- `Selection List` and `Selection Tree` can also be used as **popup components** attached to Text or Image elements in a view.
+- When the user clicks the text or image, the corresponding Selection component is displayed as a popup, allowing the user to make a selection.
+- After the selection is confirmed in the popup, it triggers the same behaviors as normal Selection components: **linked filtering**, **bookmark state persistence**, and **export state preservation**.
+
 ### Bookmark State
 
 - The `Bookmark` feature needs to **persist the current Selection state**.
