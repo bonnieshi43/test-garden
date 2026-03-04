@@ -71,8 +71,7 @@ type: pr-risk-analysis
 # 使用示例
 
 ## Input
-PR_URL: https://github.com/inetsoft-technology/stylebi/pull/2777
-
+将下面的prompt文本直接copy, 然后执行
 ## Output
 （根据上述五个部分，结合该 PR 的实际改动内容，生成一份结构化的后端改动风险评估与测试建议文档）
 
