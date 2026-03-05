@@ -1,4 +1,4 @@
-## prompts-library
+## test-garden
 
 用于管理和存储各种 Prompt，包括：
 - **日常使用的 Prompt**：如写作、翻译、代码辅助、产品需求等
@@ -7,16 +7,16 @@
 
 ### 仓库克隆方式
 
-使用 `git clone` 将仓库克隆到本地：
+使用 `git clone` 将仓库克隆到本地（示例以 HTTPS 为例，可按需改为 SSH）：
 
 ```bash
-git clone https://github.com/bonnieshi43/prompts-library.git
+git clone https://github.com/bonnieshi43/test-garden.git
 ```
 
 克隆完成后进入项目目录：
 
 ```bash
-cd prompts-library
+cd test-garden
 ```
 
 ### 主要用途
@@ -31,53 +31,17 @@ cd prompts-library
 
 **思路**：按「用途（bug 分析 / 功能分析）」+「对象（inetsoft 及模块）」来组织；Prompt 与知识分开存放，但路径和命名保持强关联。
 
-#### 目录结构示例
+#### 根目录结构示例
 
 ```text
-prompts-library/
+test-garden/
   README.md
-
   prompts/
-    bug-analysis/
-      generic/                    # 通用 bug 分析 Prompt（与具体产品无关）
-        bug_root_cause.md
-        bug_reproduction_steps.md
-      inetsoft/
-        overview.md               # inetsoft 专用 bug 分析说明与入口
-        ui_bugs.md
-        backend_bugs.md
-        performance_bugs.md
-        data_issue_bugs.md
-
-    feature-analysis/
-      generic/
-        requirement_clarify.md
-        impact_analysis.md
-        api_design_helper.md
-      inetsoft/
-        dashboard_feature_analysis.md
-        data_modeling_feature_analysis.md
-        permission_feature_analysis.md
-
   knowledge/
-    inetsoft/
-      product-overview.md         # 产品整体介绍
-      architecture.md             # 架构/模块划分
-      modules/
-        dashboard.md
-        data_modeling.md
-        permissions.md
-        reporting.md
-      troubleshooting/
-        common_issues.md          # 常见问题及解决方案
-        performance_tuning.md
-        deployment_notes.md
-
   experiments/
-    bug-analysis/
-      2026-02-inetsoft-bug-session-1.md   # 某次调试/实验记录
-    feature-analysis/
-      2026-02-new-dashboard-design.md
+  features/
+  concurrency-test/
+  ai-assistant/
 ```
 
 #### Prompt 文件内部结构建议
