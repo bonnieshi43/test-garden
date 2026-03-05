@@ -43,8 +43,9 @@
    - 用户问题
    - 预期 script 值
    - 设计意图 / 验证点
-
-请生成至少 20 个英文 case。
+3. 每个测试用例必须仅聚焦于一个script触发规则
+   避免在同一测试用例中组合多个与script相关的条件（例如，同时使用 runquery 和 function），因为这会导致无法隔离是哪个规则导致 script = true
+4. 请生成至少 20 个英文 case。
 ```
 
 ### 第四阶段：Case Review
