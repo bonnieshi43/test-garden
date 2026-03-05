@@ -38,11 +38,17 @@ test-garden/
   README.md
   prompts/
   knowledge/
+  test-docs/
   experiments/
   features/
   concurrency-test/
   ai-assistant/
 ```
+
+#### `knowledge/` 与 `test-docs/` 的定位
+
+- **`knowledge/`**：产品/模块知识沉淀（便于 AI 检索与复用），规范见 `knowledge/README.md`
+- **`test-docs/`**：测试文档归档（测试用例/测试报告/缺陷记录/环境与数据等），目录说明见 `test-docs/README.md`
 
 #### Prompt 文件内部结构建议
 
