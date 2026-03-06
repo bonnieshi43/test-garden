@@ -1,3 +1,8 @@
+#测试遗漏
+AI对copy的流程分析的比较全面，对具体的conditon和action的类型和属性测试不太具体，cycle没支持Bug #74035
+
+
+
 # Copilot Chat Conversation Export: F72805-需求分析与实现分析报告
 
 **User:** @bonnieshi43
@@ -43,27 +48,27 @@
 - **命名规则的用户可见性**：自动追加 "Copy of" 前缀的规则对用户完全透明，但需求文档未声明此规则，测试人员需从 PR 实现逆推。
 
 **是否存在隐含假设？**
-- 隐含假设：Label 为主标识符，复制时通过修改 label 区分，但调度任务内部实际调度执行依赖底层 condition/action 数据结构，并非 label 唯一标识。若 label 为空（null）时逻辑回退为 `"_#(js:New Condition/Action)"`，但需求对 label 为空的情形完全未提及。
-- 隐含假设：EM 与 Portal 共用相同的数据模型，但两个实现路径（`ScheduleTaskEditorPageComponent` vs `TaskConditionPane`/`TaskActionPane`）的状态管理机制不同，复制逻辑被分别实现了两次。
+- 隐含假设：Label 为主标识符，复制时通过修改 label 区分，但调度任务内部实际调度执行依赖底层 condition/action 数据结构，并非 label 唯一标识。若 label 为空（null）时逻辑回退为 `"_#(js:New Condition/Action)"`，但需求对 label 为空的情形完全未提及。    📅**测试-分析**：不通过label区分
+- 隐含假设：EM 与 Portal 共用相同的数据模型，但两个实现路径（`ScheduleTaskEditorPageComponent` vs `TaskConditionPane`/`TaskActionPane`）的状态管理机制不同，复制逻辑被分别实现了两次。 📅**测试-分析**：复制逻辑只实现一次
 
 **是否具备可验证性？**
 核心路径可验证。但以下方面需补充验收标准才可验证：
-- 复制后数据是否与原始完全一致（所有字段的深克隆）
+- 复制后数据是否与原始完全一致（所有字段的深克隆）   🔴  **测试-需要全面覆盖**
 - "Copy of" 的本地化翻译在不同语言下的呈现
-- 复制后任务是否标记为"已修改（dirty）"、是否触发保存提示
+- 复制后任务是否标记为"已修改（dirty）"、是否触发保存提示    📅**测试-分析**：触发保存提示
 
 ---
 
 ## 3. 需求完整性（Requirement Completeness）
 
-**缺失的关键边界场景**
+**缺失的关键边界场景**    
 
-1. **Condition 类型不止 TimeCondition**：文档显示 Condition 还包括 CompletionCondition（依赖另一任务完成后触发）。PR 实现使用泛型 `ScheduleConditionModel`，但测试用例仅覆盖 `TimeConditionModel`，CompletionCondition 的 deep clone 正确性未验证。
-2. **Action 类型多样性**：Portal 中的 Action 包括 ViewsheetAction（Dashboard 交付）、BurstAction、SaveToDiskAction 等多种类型。测试仅使用 `GeneralActionModel/ViewsheetAction`，其他 ActionType 的 clone 完整性未覆盖。
-3. **复制上限未定义**：需求和实现均未限制单任务内最大 condition/action 数量，复制后无上限提示。
-4. **用户权限与任务归属**：若任务属于其他用户或 admin 权限受限，Copy 按钮是否应被禁用？需求未声明，实现也未处理。
-5. **保存前离开（导航离开）**：��制操作触发 `taskChanged=true`，若用户复制后直接离开，现有的"未保存确认"对话框是否正常弹出？需求未验证此路径。
-6. **撤销（Undo）**：复制后能否撤销？需求未提及，实现未支持。
+1. **Condition 类型不止 TimeCondition**：文档显示 Condition 还包括 CompletionCondition（依赖另一任务完成后触发）。PR 实现使用泛型 `ScheduleConditionModel`，但测试用例仅覆盖 `TimeConditionModel`，CompletionCondition 的 deep clone 正确性未验证。  🔴  **测试-需要全面覆盖**
+2. **Action 类型多样性**：Portal 中的 Action 包括 ViewsheetAction（Dashboard 交付）、BurstAction、SaveToDiskAction 等多种类型。测试仅使用 `GeneralActionModel/ViewsheetAction`，其他 ActionType 的 clone 完整性未覆盖。                                      🔴  **测试-需要全面覆盖**
+3. **复制上限未定义**：需求和实现均未限制单任务内最大 condition/action 数量，复制后无上限提示。 📅**测试-分析**：不存在, 无需考虑
+4. **用户权限与任务归属**：若任务属于其他用户或 admin 权限受限，Copy 按钮是否应被禁用？需求未声明，实现也未处理。 📅**测试-分析** 无需考虑    
+5. **保存前离开（导航离开）**：��制操作触发 `taskChanged=true`，若用户复制后直接离开，现有的"未保存确认"对话框是否正常弹出？需求未验证此路径。🔴  **测试-需要覆盖支持**
+6. **撤销（Undo）**：复制后能否撤销？需求未提及，实现未支持。  🔴  **测试-需要全面覆盖支持**
 
 **UI 行为不完整**
 
@@ -230,7 +235,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ## 3.2 必要测试类别与范围
 
-### 1️⃣ 功能验证（Functional）
+### 1️⃣ 功能验证（Functional）                              📅 **测试-结果**功能正常
 
 #### 核心路径验证
 
@@ -245,7 +250,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 **验证目标**：复制功能在两个入口均工作正常，数据完整，命名正确，焦点跳转符合预期。
 
-#### 状态同步验证（EM 特有双数组同步）
+#### 状态同步验证（EM 特有双数组同步）                       📅 **测试-结果**功能正常
 
 **触发原因**：EM 维护 `conditionItems`（UI 列表）与 `model.taskConditionPaneModel.conditions`（数据模型）双数组，复制逻辑需同时向两者 push，若不同步则 UI 与数据错位。
 
@@ -256,20 +261,20 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 **验证目标**：双数组在 copy → edit → delete 全链路操作下始终保持一致。
 
-#### UI 行为验证
+#### UI 行为验证                              
 
 **触发原因**：Copy 按钮为新增 UI 元素，其禁用逻辑、点击后的视图跳转、焦点选中行为均需验证。
 
 **重点覆盖范围**：
-- 未选中任何条目时 Copy 按钮为 disabled
-- 选中一条时 Copy 按钮可点击
-- Portal 多选时 Copy 按钮为 disabled
-- 点击 Copy 后新条目出现在列表末尾并被选中
-- Portal 点击 Copy 后自动切换到编辑视图（listView = true）
+- 未选中任何条目时 Copy 按钮为 disabled                      📅 **测试-结果**portal结果正确，EM总是有一条选择，copy不会变成disable
+- 选中一条时 Copy 按钮可点击                                 📅 **测试-结果**portal和EM都正常
+- Portal 多选时 Copy 按钮为 disabled                        📅 **测试-结果**结果正确
+- 点击 Copy 后新条目出现在列表末尾并被选中                    📅 **测试-结果**结果正确
+- Portal 点击 Copy 后自动切换到编辑视图（listView = true）   📅 **测试-结果**不会自动切换到编辑视图Bug #74028
 
-**Browser（桌面浏览器）**：Chrome / Firefox / Edge 均需验证按钮渲染与点击行为。
+**Browser（桌面浏览器）**：Chrome / Firefox / Edge 均需验证按钮渲染与点击行为。📅 **测试-结果**结果正确
 
-**本地化（Locale）**：
+**本地化（Locale）**：                                     📅 **测试-结果**本地化已经添加，暂时没翻译文件
 - 英文环境：label 显示为 "Copy of [原始名称]"
 - 非英文环境（如中文、日文）：验证 `Copy of` 是否正确翻译，或降级展示
 - 验证 `srinter.properties` 其他语言文件是否同步添加了翻译 key
@@ -281,10 +286,10 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 **触发原因**：Copy 操作后 action/condition 数量增加，影响原有 Delete 逻辑的 `canDelete` guard；新按钮插入现有 Add / Delete 按钮之间，需验证原有流程不被破坏。
 
 **受影响模块**：
-- `deleteConditions()` / `deleteActions()`（EM）：复制后 length ≥ 2，Delete 应可用
-- `deleteCondition()` / `deleteAction()`（Portal）：复制后再 Delete 需弹出确认对话框
-- **任务保存流程**：复制后 `taskChanged=true`，执行 Save 后数据是否正确持久化（包含复制的新条目）
-- **任务保存前离开**：复制后直接切换页面，未保存确认对话框是否正常触发
+- `deleteConditions()` / `deleteActions()`（EM）：复制后 length ≥ 2，Delete 应可用                 📅 **测试-结果**Delete可用 
+- `deleteCondition()` / `deleteAction()`（Portal）：复制后再 Delete 需弹出确认对话框                📅 **测试-结果**复制后再 Delete 弹出确认对话框
+- **任务保存流程**：复制后 `taskChanged=true`，执行 Save 后数据是否正确持久化（包含复制的新条目）     📅 **测试-结果**Save 后数据持久化
+- **任务保存前离开**：复制后直接切换页面，未保存确认对话框是否正常触发                                📅 **测试-结果**未保存对话框正常触发
 
 ---
 
@@ -294,19 +299,19 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 | 边界场景 | 预期行为 |
 |---|---|
-| label 为 `null` 或空字符串 | 回退为 `"_#(js:New Condition)"` / `"_#(js:New Action)"` |
-| label 已有单层 "Copy of" 前缀 | 复制后仍为 "Copy of X"（不叠加） |
-| label 已有多层 "Copy of Copy of" 前缀 | while 循环剥离后，复制结果为 "Copy of X" |
-| label 手动被编辑为极长的多层 "Copy of" 嵌套字符串 | while 循环正确终止，结果为 "Copy of X" |
-| `selectedConditionIndex` 越界（大于 conditions.length-1） | 不触发 copy，`taskChanged` 保持 false |
-| Portal 多选（selectedConditions.length > 1） | Copy 按钮禁用，`copyCondition()` 执行无效果 |
-| CompletionCondition 类型（非 TimeCondition）的复制 | 所有字段深克隆正确，特别是对其他任务的引用字段 |
-| BurstAction / SaveToDisk 等非 ViewsheetAction 的复制 | 所有字段深克隆正确，action-specific 字段不丢失 |
-| 任务中已有最大数量的 conditions/actions 时复制 | 若系统有上限需验证提示，无上限时需验证性能无明显劣化 |
+| label 为 `null` 或空字符串 | 回退为 `"_#(js:New Condition)"` / `"_#(js:New Action)"` |               📅 **测试-分析**label 不会为null
+| label 已有单层 "Copy of" 前缀 | 复制后仍为 "Copy of X"（不叠加） |                                    📅 **测试-结果**copy lable相同不叠加
+| label 已有多层 "Copy of Copy of" 前缀 | while 循环剥离后，复制结果为 "Copy of X" |                     📅 **测试-分析**：不会出现这种情况，lable前缀不会叠加
+| label 手动被编辑为极长的多层 "Copy of" 嵌套字符串 | while 循环正确终止，结果为 "Copy of X" |             📅 **测试-分析**：不会出现这种情况，label不能编辑
+| `selectedConditionIndex` 越界（大于 conditions.length-1） | 不触发 copy，`taskChanged` 保持 false |   📅 **测试-分析**：无需考虑
+| Portal 多选（selectedConditions.length > 1） | Copy 按钮禁用，`copyCondition()` 执行无效果 |          📅 **测试-结果** 结果正确
+| CompletionCondition 类型（非 TimeCondition）的复制 | 所有字段深克隆正确，特别是对其他任务的引用字段 |    📅 **测试-结果**结果正确
+| BurstAction / SaveToDisk 等非 ViewsheetAction 的复制 | 所有字段深克隆正确，action-specific 字段不丢失 | 📅 **测试-分析**：BurstAction 不支持，SaveToDisk结果正确
+| 任务中已有最大数量的 conditions/actions 时复制 | 若系统有上限需验证提示，无上限时需验证性能无明显劣化 |    📅 **测试-结果**测试10个，结果正确
 
 ---
 
-### 4️⃣ 安全测试（Security）
+### 4️⃣ 安全测试（Security）          📅 **测试-分析** 无需测试和权限没关系
 
 **触发原因**：Copy 按钮操作修改内存中的 task model，若存在权限边界（如普通用户是否可以复制 admin 创建的 task action），需验证权限控制与复制操作一致。
 
@@ -316,7 +321,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 5️⃣ 兼容性测试（Compatibility）
+### 5️⃣ 兼容性测试（Compatibility）   📅 **测试-分析**:本地化已经添加，暂时没翻译，待验证  
 
 **触发原因**：`srinter.properties` 新增了 `Copy of` key，若其他语言资源文件缺失此 key，i18n 框架的 fallback 行为决定用户界面的最终展示。
 
@@ -335,11 +340,11 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 - `task-condition-pane.spec.ts` 未覆盖 `CompletionCondition` 类型的复制
 - `task-action-pane.spec.ts` 未覆盖 BurstAction、SaveToDisk 等其他 actionType 的复制
 - Portal spec 中缺少对 "Copy of" 前缀剥离的多层测试（EM spec 有，Portal spec 无）
-- Portal action spec 中缺少 label 为 null 时的边界用例
+- Portal action spec 中缺少 label 为 null 时的边界用例          
 
 **E2E 关键路径**：
-- 路径1：EM → 编辑调度任务 → 选择 Condition → 点击 Copy → 验证列表 → 保存 → 重新打开任务确认持久化
-- 路径2：Portal → 编辑调度任务 → 选择 Action（Email 类型）→ 点击 Copy → 修改复制品的收件人 → 保存 → 验证两个 Action 各自独立
+- 路径1：EM → 编辑调度任务 → 选择 Condition → 点击 Copy → 验证列表 → 保存 → 重新打开任务确认持久化    📅 **测试-结果** 重新打开持久化
+- 路径2：Portal → 编辑调度任务 → 选择 Action（Email 类型）→ 点击 Copy → 修改复制品的收件人 → 保存 → 验证两个 Action 各自独立   📅 **测试-结果**两个 Action 各自独立
 
 **是否需要 Mock / Stub**：已有单元测试已 mock 了 `MatDialog`、`Router`、`TimeZoneService` 等，E2E 测试需要真实 scheduler 服务或 API stub。
 
@@ -349,7 +354,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-01：EM 入口 - 复制 TimeCondition 核心路径
+### 场景 TC-01：EM 入口 - 复制 TimeCondition 核心路径    📅 **测试-结果**符合预期
 
 **测试目标**：验证 EM 中复制已有 TimeCondition 后，数据完整性、命名规则、自动选中行为均正确。
 
@@ -368,14 +373,14 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 - Conditions 列表中出现第 2 条，label 为 "Copy of [原始名称]"
 - 新条目的编辑表单中，所有字段（类型 EVERY_DAY、时间 09:00、时区 America/New_York 等）与原条件完全一致
 - 新条目自动处于选中状态
-- 页面顶部显示未保存（脏状态）标志
+- 页面顶部显示未保存（脏状态）标志       📅 **测试-结果**没有标志
 - 原始条件的内容未发生任何改变
 
 **覆盖风险点**：深克隆正确性、命名规则、EM 双数组同步、dirty 状态标记
 
 ---
 
-### 场景 TC-02：EM 入口 - 复制 Action 后保存并重新打开验证持久化
+### 场景 TC-02：EM 入口 - 复制 Action 后保存并重新打开验证持久化   📅 **测试-结果**符合预期
 
 **测试目标**：验证复制后的 Action 在保存后正确持久化，重新打开任务时两个独立的 Action 均存在且内容正确。
 
@@ -395,14 +400,14 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 **预期结果**：
 - Actions 列表中存在两条 Action
 - 第一条：原始 Action，emailAddress=A@test.com
-- 第二条：复制品，emailAddress=B@test.com，label 含 "Copy of"
+- 第二条：复制品，emailAddress=B@test.com，label 含 "Copy of"    📅 **测试-结果**save 后lable不存在Copy of，结果合理
 - 两条 Action 相互独立，修改其中一条不影响另一条
 
 **覆盖风险点**：数据持久化、深克隆独立性、dirty 状态与保存流程集成
 
 ---
 
-### 场景 TC-03：Portal 入口 - 复制 Action（ViewsheetAction）核心路径
+### 场景 TC-03：Portal 入口 - 复制 Action（ViewsheetAction）核心路径      📅 **测试-结果**符合预期
 
 **测试目标**：验证 User Portal 中复制 Action 后的数据完整性及视图跳转行为。
 
@@ -418,7 +423,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 **预期结果**：
 - Actions 列表新增一条，label = "Copy of [原始名称]"
-- 界面自动切换到新条目的编辑视图（listView 变为 true，编辑表单展开）
+- 界面自动切换到新条目的编辑视图（listView 变为 true，编辑表单展开）   📅 **测试-结果** Bug #74028
 - 新 Action 的所有字段（Dashboard 路径、收件人邮箱、邮���格式、fromEmail、bundledAsZip 等）与原 Action 完全一致
 - 原 Action 的字段未发生变化
 
@@ -426,7 +431,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-04：Portal 多选状态下 Copy 按钮禁用验证
+### 场景 TC-04：Portal 多选状态下 Copy 按钮禁用验证        📅 **测试-结果** 符合预期
 
 **测试目标**：验证 Portal 中选中多个 Action/Condition 时 Copy 按钮处于禁用状态，点击无效果。
 
@@ -439,7 +444,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 4. 尝试点击 Copy 按钮（若按钮非 disabled 可通过 JS 调用 copyAction()）
 
 **预期结果**：
-- 多选状态下 Copy 按钮显示为 disabled，无法点击
+- 多选状态下 Copy 按钮显示为 disabled，无法点击   
 - `model.actions.length` 不变
 - 若通过代码绕过调用 `copyAction()`，函数直接 return，不执行任何操作
 
@@ -447,7 +452,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-05：复制的副本再次被复制（前缀不叠加验证）
+### 场景 TC-05：复制的副本再次被复制（前缀不叠加验证）  📅 **测试-结果** 符合预期
 
 **测试目标**：验证对 "Copy of X" 再次执行 Copy 操作后，结果仍为 "Copy of X"，不出现 "Copy of Copy of X"。
 
@@ -469,7 +474,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-06：label 为空（null/空字符串）的 Condition/Action 复制
+### 场景 TC-06：label 为空（null/空字符串）的 Condition/Action 复制    📅 **测试-分析** lable不可以更改忽略
 
 **测试目标**：验证当 condition 或 action 的 label 为 null 或空字符串时，复制逻辑能正确回退并命名。
 
@@ -490,7 +495,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-07：复制后未保存直接导航离开（Dirty Check 回归）
+### 场景 TC-07：复制后未保存直接导航离开（Dirty Check 回归）  📅 **测试-结果** 符合预期
 
 **测试目标**：验证复制操作触发 taskChanged=true 后，用户导航离��页面时系统正确弹出"未保存"确认提示。
 
@@ -503,7 +508,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 4. 观察系统响应
 
 **预期结果**：
-- 系统弹出"You have unsaved changes. Are you sure you want to leave?"类型的确认对话框
+- 系统弹出"You have unsaved changes. Are you sure you want to leave?"类型的确认对话框  📅 **测试-结果**弹出The task has unsaved changes, close anyway?
 - 点击"取消"后留在当前任务编辑页面，复制的条目仍存在
 - 点击"确认离开"后，导航成功，复制的条目被丢弃（因未保存）
 
@@ -511,7 +516,7 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 
 ---
 
-### 场景 TC-08：非英文语言环境下 "Copy of" 的展示验证
+### 场景 TC-08：非英文语言环境下 "Copy of" 的展示验证   📅 **测试-分析** 没翻译先忽略
 
 **测试目标**：验证系统在非英文 locale 下，Copy 按钮文本及复制后的 label 命名是否正确展示，不出现原始 i18n key 外泄。
 
