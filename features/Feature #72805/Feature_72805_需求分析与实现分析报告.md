@@ -535,3 +535,4 @@ while(baseLabel.startsWith(this.COPY_OF_PREFIX)) {
 - Copy 按钮文本（"_#(Copy)"）与其他按钮（Add/Delete）在同语言下保持翻译风格一致
 
 **覆盖风险点**：本地化资源 key 缺失、i18n 降级机制、多语言环境下用户体验一致性
+
