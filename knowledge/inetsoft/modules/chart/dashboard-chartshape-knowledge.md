@@ -1,3 +1,14 @@
+---
+product: StyleBI
+domain: dashboard
+module: chart
+type: dashboard-design-chart
+tags:
+ - chart
+source:[https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/viewsheet/GroupDataByDimension.html#_group_by_shape, https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/administration/Presentation.html#LookandFeel ]
+
+---
+
 # Knowledge Extraction - Chart Shape
 
 ## 1. Overview
@@ -8,13 +19,7 @@ It allows users to customize the visual representation of chart data points by a
 
 Custom shapes provide richer visual expression for chart data points.
 
-This feature is primarily used in:
-
-- Scatter Chart
-- Bubble Chart
-- Point Chart
-
-Other chart types do not support custom shapes.
+This feature is primarily used in Point-based Charts, where each data item is represented by an individual visual marker.Other chart types do not support custom shapes.
 
 ---
 
@@ -24,6 +29,8 @@ Currently supported formats:
 
 - JPG
 - PNG
+- gif
+- archive
 
 Users can upload custom shape images in these formats.
 
@@ -34,14 +41,12 @@ Users can upload custom shape images in these formats.
 
 Custom shapes can be uploaded from two different system entry points.
 
-### Report-Level Upload
+### Dashboard-Level Upload
 
 Location:
 
-Report Designer  
-→ Chart Editor  
-→ Edit Shape  
-→ Add Shape
+Dashboard Designer  
+Chart Editor -> Edit Shape -> Add Shape
 
 Designers can upload shapes when configuring a chart.
 
@@ -49,10 +54,7 @@ Designers can upload shapes when configuring a chart.
 
 Location:
 
-Enterprise Manager  
-→ Settings  
-→ Presentation  
-→ Custom Shapes
+Enterprise Manager -> Settings -> Presentation -> Custom Shapes
 
 Administrators can upload and manage shapes in the global shape library.
 
@@ -65,8 +67,6 @@ Shapes can exist at different system scopes:
 - Global
 - Organization
 
-Global shapes can be reused across reports.
-
 ---
 
 ## 5. Storage Location
@@ -75,10 +75,7 @@ All uploaded shapes are stored in the **system content repository**.
 
 Location:
 
-Enterprise Manager  
-→ Settings  
-→ Content  
-→ Storage
+Enterprise Manager -> Settings -> Content -> Storage
 
 Shape files are stored inside the **Portal Folder**.
 
@@ -102,9 +99,7 @@ Shape display must remain correct after export operations
 
 ## 7. Reference Documentation
 The following documentation provides additional details about chart shapes and related features in StyleBI.
-
 - Group Data By Dimension  
   https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/viewsheet/GroupDataByDimension.html#_group_by_shape
-
 - Custom Shape
   https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/administration/Presentation.html#LookandFeel
