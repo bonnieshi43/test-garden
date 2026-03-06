@@ -20,67 +20,67 @@ def encode_string(s: str) -> str:
 class MultiOrgVSAndWSTasks(TaskSet):
 
     org_assets = {
-        "organization0": [
+        "org-ci1": [
             (
-                "1^128^__NULL__^Examples/Census^organization0",
-                "1^2^__NULL__^Examples/Census Data^organization0",
+                "1^128^__NULL__^Examples/Census^org-ci1",
+                "1^2^__NULL__^Examples/Census Data^org-ci1",
                 1,
             ),
             (
-                "1^128^__NULL__^Examples/Call Center Monitoring^organization0",
-                "1^2^__NULL__^Examples/Call Center Monitoring^organization0",
+                "1^128^__NULL__^Examples/Call Center Monitoring^org-ci1",
+                "1^2^__NULL__^Examples/Call Center Monitoring^org-ci1",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Construction Dashboard^organization0",
-                "1^2^__NULL__^Examples/Construction Data^organization0",
+                "1^128^__NULL__^Examples/Construction Dashboard^org-ci1",
+                "1^2^__NULL__^Examples/Construction Data^org-ci1",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Hurricane^organization0",
-                "1^2^__NULL__^Examples/Hurricane^organization0",
+                "1^128^__NULL__^Examples/Hurricane^org-ci1",
+                "1^2^__NULL__^Examples/Hurricane^org-ci1",
                 1,
             ),
             (
-                "1^128^__NULL__^Examples/Return Analysis^organization0",
-                "1^2^__NULL__^Examples/Order Details^organization0",
+                "1^128^__NULL__^Examples/Return Analysis^org-ci1",
+                "1^2^__NULL__^Examples/Order Details^org-ci1",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Sales Summary^organization0",
-                "1^2^__NULL__^Examples/Sales Revenue^organization0",
+                "1^128^__NULL__^Examples/Sales Summary^org-ci1",
+                "1^2^__NULL__^Examples/Sales Revenue^org-ci1",
                 2,
             ),
         ],
-        "organization1": [
+        "org-ci2": [
             (
-                "1^128^__NULL__^Examples/Census^organization1",
-                "1^2^__NULL__^Examples/Census Data^organization1",
+                "1^128^__NULL__^Examples/Census^org-ci2",
+                "1^2^__NULL__^Examples/Census Data^org-ci2",
                 1,
             ),
             (
-                "1^128^__NULL__^Examples/Call Center Monitoring^organization1",
-                "1^2^__NULL__^Examples/Call Center Monitoring^organization1",
+                "1^128^__NULL__^Examples/Call Center Monitoring^org-ci2",
+                "1^2^__NULL__^Examples/Call Center Monitoring^org-ci2",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Construction Dashboard^organization1",
-                "1^2^__NULL__^Examples/Construction Data^organization1",
+                "1^128^__NULL__^Examples/Construction Dashboard^org-ci2",
+                "1^2^__NULL__^Examples/Construction Data^org-ci2",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Hurricane^organization1",
-                "1^2^__NULL__^Examples/Hurricane^organization1",
+                "1^128^__NULL__^Examples/Hurricane^org-ci2",
+                "1^2^__NULL__^Examples/Hurricane^org-ci2",
                 1,
             ),
             (
-                "1^128^__NULL__^Examples/Return Analysis^organization1",
-                "1^2^__NULL__^Examples/Order Details^organization1",
+                "1^128^__NULL__^Examples/Return Analysis^org-ci2",
+                "1^2^__NULL__^Examples/Order Details^org-ci2",
                 2,
             ),
             (
-                "1^128^__NULL__^Examples/Sales Summary^organization1",
-                "1^2^__NULL__^Examples/Sales Revenue^organization1",
+                "1^128^__NULL__^Examples/Sales Summary^org-ci2",
+                "1^2^__NULL__^Examples/Sales Revenue^org-ci2",
                 2,
             ),
         ],
@@ -236,8 +236,8 @@ class MultiOrgUser(HttpUser):
     wait_time = between(1, 5)
 
     org_accounts = [
-        ("organization0", "user0", "success123", 1),
-        ("organization1", "user1", "success123", 1),
+        ("org-ci1", "ci1", "success123", 1),
+        ("org-ci2", "ci2", "success123", 1),
     ]
 
     def on_start(self):
