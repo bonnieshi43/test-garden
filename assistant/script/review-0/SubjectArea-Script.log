@@ -1,0 +1,145 @@
+=== SubjectArea-Script | 2026-03-10T07:40:40.283Z ===
+
+
+📋 SubjectArea Test Runner
+   Cases: E:\inetsoft\sr14_0\assistant\test\src\cases\SubjectArea-Script.yaml
+   Concurrency: 5
+
+🔢 Running 30 cases
+
+  [5] ❌ TC-P05
+       script:     expected true, got false (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3434, Completion: 40, Total: 3474, Cost: $0.000703
+       [SubjectArea] script=false, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Enterprise Manager",
+    "explicitly_mentioned": true
+  }
+]
+       [SubjectArea] completedQuery=How do I use the Admin Console to automate the removal of a Data Source?
+       ----------------
+  [3] ✅ TC-P03
+  [2] ✅ TC-P02
+  [1] ✅ TC-P01
+  [7] ✅ TC-P07
+  [4] ✅ TC-P04
+  [6] ✅ TC-P06
+  [8] ❌ TC-N01
+       script:     expected false, got true (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3438, Completion: 41, Total: 3479, Cost: $0.000704
+       [SubjectArea] script=true, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Dashboard",
+    "submodule": "freehand table",
+    "explicitly_mentioned": false
+  }
+]
+       [SubjectArea] completedQuery=Where can I use CALC.sumif to calculate total sales where the quantity purchased exceeds 50?
+       ----------------
+  [11] ✅ TC-N04
+  [9] ✅ TC-N02
+  [12] ✅ TC-N05
+  [10] ✅ TC-N03
+  [13] ✅ TC-N06
+  [14] ✅ TC-G01
+  [18] ✅ TC-F01
+  [19] ❌ TC-F02
+       script:     expected false, got true (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3435, Completion: 39, Total: 3474, Cost: $0.000703
+       [SubjectArea] script=true, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Dashboard",
+    "submodule": "others",
+    "explicitly_mentioned": true
+  }
+]
+       [SubjectArea] completedQuery=How does the SUM function work when used in a calculated field in the Formula Editor?
+       ----------------
+  [20] ✅ TC-F03
+  [21] ✅ TC-F04
+  [22] ✅ TC-M04
+  [23] ❌ TC-M05
+       script:     expected true, got false (gui_required=false)
+       --- LLM logs ---
+       [LLM - CompleteQueryByHistory]  Token Usage - Model: gpt-5-mini, Prompt: 1883, Completion: 72, Total: 1955, Cost: $0.000405
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3421, Completion: 39, Total: 3460, Cost: $0.000700
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3420, Completion: 729, Total: 4149, Cost: $0.000976
+       [SubjectArea] script=false, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "visualization dashboard",
+    "explicitly_mentioned": false
+  }
+]
+       [SubjectArea] completedQuery=Sales Amount
+       ----------------
+  [25] ✅ TC-G02
+  [24] ❌ TC-M06
+       script:     expected true, got false (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3424, Completion: 21, Total: 3445, Cost: $0.000693
+       [LLM - CompleteQueryByHistory]  Token Usage - Model: gpt-5-mini, Prompt: 1902, Completion: 80, Total: 1982, Cost: $0.000412
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3423, Completion: 747, Total: 4170, Cost: $0.000983
+       [SubjectArea] script=false, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Dashboard",
+    "submodule": "others",
+    "explicitly_mentioned": false
+  }
+]
+       [SubjectArea] completedQuery=What about the second condition?
+       ----------------
+  [26] ❌ TC-G03
+       script:     expected false, got true (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3435, Completion: 40, Total: 3475, Cost: $0.000703
+       [SubjectArea] script=true, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Enterprise Manager",
+    "explicitly_mentioned": true
+  }
+]
+       [SubjectArea] completedQuery=Where do I find the Admin Console in the portal to run a server-side script?
+       ----------------
+  [27] ✅ TC-G04
+  [28] ✅ TC-E01
+  [17] ✅ TC-M03
+  [29] ❌ TC-E02
+       script:     expected false, got true (gui_required=false)
+       --- LLM logs ---
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3435, Completion: 41, Total: 3476, Cost: $0.000703
+       [SubjectArea] script=true, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Data Worksheet",
+    "explicitly_mentioned": true
+  }
+]
+       [SubjectArea] completedQuery=How do I create a calculated field expression in the Data Worksheet using the Formula Editor?
+       ----------------
+  [30] ✅ TC-E03
+  [15] ❌ TC-M01
+       script:     expected true, got false (gui_required=false)
+       --- LLM logs ---
+       [LLM - CompleteQueryByHistory]  Token Usage - Model: gpt-5-mini, Prompt: 1896, Completion: 100, Total: 1996, Cost: $0.000419
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3434, Completion: 39, Total: 3473, Cost: $0.000702
+       [LLM - SubjectArea]  Token Usage - Model: gpt-5-mini, Prompt: 3433, Completion: 683, Total: 4116, Cost: $0.000960
+       [SubjectArea] script=false, gui_required=false
+       [SubjectArea] subjectAreas=[
+  {
+    "module": "Dashboard",
+    "submodule": "others",
+    "explicitly_mentioned": true
+  }
+]
+       [SubjectArea] completedQuery=Yes, that approach looks right. How do I properly structure the variable assignment?
+       ----------------
+  [16] ✅ TC-M02
