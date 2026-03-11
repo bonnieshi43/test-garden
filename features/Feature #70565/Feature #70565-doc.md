@@ -13,7 +13,9 @@ pr_link: [https://github.com/inetsoft-technology/stylebi/pull/2777](https://gith
 assignee: Stephen Webster
 target_version: stylebi-1.1.0
 
-## last_updated: 2026-03-09
+last_updated: 2026-03-09
+
+---
 
 # 1 Feature Summary
 
@@ -170,4 +172,4 @@ Feature #70565 新增 **SVG 格式 Chart Shape 支持**。
 | 74080  | Related | tooltip of upload shape is wrong                                                | New      |
 | 74082  | Related | The type of "upload shape" needs to be updated.                                 | New      |
 
-
+---

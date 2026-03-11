@@ -19,7 +19,7 @@ It allows users to customize the visual representation of chart data points by a
 
 Custom shapes provide richer visual expression for chart data points.
 
-This feature is primarily used in Point-based Charts, where each data item is represented by an individual visual marker.Other chart types do not support custom shapes.
+This feature is primarily used in Point-based Charts, where each data item is represented by an individual visual marker.Other chart types do not support custom shapes, except for radar charts when the "Show Point" property is enabled.
 
 ---
 
