@@ -1,12 +1,7 @@
----
-## doc_type: feature-test-doc
-product: StyleBI
-module: Composer / Properties / Script Pane (CodeMirror)
-feature_id: 72691
-feature_name: script.cursor.top（脚本面板重开时光标/视图置顶）
-pr_link: https://github.com/inetsoft-technology/stylebi/pull/2294
-last_updated: 2026-03-10
----
+
+| doc_type | product | module | feature_id | feature | pr_link | Assignee | last_updated | version |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| feature-test-doc | StyleBI | Composer / Properties / Script Pane | Feature #72691 | Script editor opens to bottom of script | https://github.com/inetsoft-technology/stylebi/pull/2294 | Franky Pan | 2026-03-10 | 14.0|
 
 # 1 Feature Summary
 
@@ -85,10 +80,10 @@ last_updated: 2026-03-10
 
 # 6 Bug List
 
-| Bug ID   | Description | Status |
-|----------|-------------|--------|
-| Bug #74071 | <stateless-sessions-Feature #72691> When changing script.cursor.top, the server needs to be restarted for the change to take effect. | New |
-| Bug #74075 | <stateless-sessions-Feature #72691> When script.cursor.top is set on an organization, copying the organization and restarting the server causes the property to be lost in the copied organization. | New |
-| Bug #74077 | <stateless-sessions-Feature #72691> When script.cursor.top is set to true, it is not applied to the script in the Dashboard Options dialog. | New |
-| Bug #74081 |<stateless-sessions-Feature #72691> When switching tabs, the cursor does not appear in the Script tab. | New |
-| Bug #74084 |<stateless-sessions-Feature #72691>When script.cursor.top is set to true, it is not applied to the Formula Editor dialog in Worksheet. | New |
+| Bug ID | Description | Status |
+| --- | --- | --- |
+| Bug #74071 | <stateless-sessions-Feature #72691> When changing script.cursor.top, the server needs to be restarted for the change to take effect. | Closed |
+| Bug #74075 | <stateless-sessions-Feature #72691> When script.cursor.top is set on an organization, copying the organization and restarting the server causes the property to be lost in the copied organization. | Closed |
+| Bug #74077 | <stateless-sessions-Feature #72691> When script.cursor.top is set to true, it is not applied to the script in the Dashboard Options dialog. | Resolved |
+| Bug #74081 | <stateless-sessions-Feature #72691> When switching tabs, the cursor does not appear in the Script tab. | Resolved |
+| Bug #74084 | <stateless-sessions-Feature #72691>when set script.cursor.top is true,it haven't applied on formula editor dialog in worksheet |Resolved |
