@@ -258,5 +258,5 @@ class MultiOrgUser(HttpUser):
 if __name__ == "__main__":
     import os
 
-    os.system("locust -f Scenario5_multi_org_vs_ws.py")
+    os.system("locust -f Scenario_multi_org_vs_ws.py")
 

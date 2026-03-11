@@ -262,4 +262,4 @@ class MultiOrgExportUser(HttpUser):
 
 if __name__ == "__main__":
     import os
-    os.system("locust -f Scenario_multi_org_export_schedule.py")
+    os.system("locust -f Scenario_multi_org_report_export.py")

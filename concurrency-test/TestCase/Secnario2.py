@@ -158,4 +158,4 @@ class ProductAPIUser(HttpUser):
 
 if __name__ == "__main__":
     import os
-    os.system("locust -f Scenario_viewsheet_worksheet.py")
+    os.system("locust -f Secnario2.py")
