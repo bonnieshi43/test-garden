@@ -23,21 +23,21 @@ jobs:
     steps:
       - name: Prepare message
         id: msg
+        shell: bash
         run: |
           EVENT="${{ github.event_name }}"
           ACTION="${{ github.event.action }}"
           REPO="${{ github.repository }}"
           ACTOR="${{ github.actor }}"
 
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          BASE="${{ github.event.pull_request.base.ref }}"
-
           MESSAGE=""
 
           if [ "$EVENT" = "pull_request" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+            AUTHOR="${{ github.event.pull_request.user.login }}"
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+            BASE="${{ github.event.pull_request.base.ref }}"
 
             if [ "$ACTION" = "opened" ]; then
               STATUS="🚀 PR Opened"
@@ -55,55 +55,65 @@ jobs:
               STATUS="📦 PR Event"
             fi
 
-            MESSAGE="### ${STATUS}
-
-**Repository:** ${REPO}
-
-**Title:** ${PR_TITLE}
-
-**Author:** ${AUTHOR}
-
-**Branch:** ${BRANCH} → ${BASE}
-
-**Triggered by:** ${ACTOR}
-
-[🔎 View PR](${PR_URL})
-"
+            MESSAGE=$(printf '%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n' \
+              "### ${STATUS}" \
+              "**Repository:** ${REPO}" \
+              "**Title:** ${PR_TITLE}" \
+              "**Author:** ${AUTHOR}" \
+              "**Branch:** ${BRANCH} → ${BASE}" \
+              "**Triggered by:** ${ACTOR}" \
+              "[🔎 View PR](${PR_URL})")
 
           elif [ "$EVENT" = "pull_request_review" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
 
             REVIEW_STATE="${{ github.event.review.state }}"
             REVIEWER="${{ github.event.review.user.login }}"
 
-            MESSAGE="### 👀 PR Review
-
-**Repository:** ${REPO}
-
-**PR:** ${PR_TITLE}
-
-**Reviewer:** ${REVIEWER}
-
-**State:** ${REVIEW_STATE}
-
-[🔎 View PR](${PR_URL})
-"
+            MESSAGE=$(printf '%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n' \
+              "### 👀 PR Review" \
+              "**Repository:** ${REPO}" \
+              "**PR:** ${PR_TITLE}" \
+              "**Reviewer:** ${REVIEWER}" \
+              "**State:** ${REVIEW_STATE}" \
+              "[🔎 View PR](${PR_URL})")
 
           elif [ "$EVENT" = "issue_comment" ]; then
+            # issue_comment payload doesn't include github.event.pull_request.*
+            # For PR comments, PR info is under github.event.issue.*
+            PR_TITLE="${{ github.event.issue.title }}"
+            PR_URL="${{ github.event.issue.html_url }}"
 
             COMMENTER="${{ github.event.comment.user.login }}"
             COMMENT_URL="${{ github.event.comment.html_url }}"
 
-            MESSAGE="### 💬 PR Comment
+            MESSAGE=$(printf '%s\n\n%s\n\n%s\n\n%s\n\n%s\n' \
+              "### 💬 PR Comment" \
+              "**Repository:** ${REPO}" \
+              "**PR:** ${PR_TITLE}" \
+              "**Comment by:** ${COMMENTER}" \
+              "[🔎 View Comment](${COMMENT_URL})")
 
-**Repository:** ${REPO}
+          elif [ "$EVENT" = "workflow_run" ]; then
+            WF_NAME="${{ github.event.workflow_run.name }}"
+            WF_STATUS="${{ github.event.workflow_run.conclusion }}"
+            WF_URL="${{ github.event.workflow_run.html_url }}"
 
-**PR:** ${PR_TITLE}
+            MESSAGE=$(printf '%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n' \
+              "### 🧪 CI Workflow Run" \
+              "**Repository:** ${REPO}" \
+              "**Workflow:** ${WF_NAME}" \
+              "**Conclusion:** ${WF_STATUS}" \
+              "**Triggered by:** ${ACTOR}" \
+              "[🔎 View Run](${WF_URL})")
 
-**Comment by:** ${COMMENTER}
+          fi
 
-[🔎 View Comment](${COMMENT_URL})
-"
-
+          # Don't send empty message (e.g. unexpected event payload)
+          if [ -z "$MESSAGE" ]; then
+            echo "No message to send for EVENT=$EVENT ACTION=$ACTION"
+            exit 0
           fi
 
           echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
@@ -111,6 +121,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Send DingTalk message
+        shell: bash
         run: |
           curl "${{ secrets.DINGTALK_WEBHOOK }}" \
           -H "Content-Type: application/json" \
