@@ -122,7 +122,7 @@ class ProductAPIUser(HttpUser):
     def on_start(self):
         resp = self.client.post(
             "/api/public/login",
-            json={"username": "admin", "orgID": "host-org", "password": "admin"},
+            json={"username": "ci1", "orgID": "host-org", "password": "success123"},
         )
 
         if resp.status_code == 200:
