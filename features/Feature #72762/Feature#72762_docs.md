@@ -4,7 +4,10 @@ product: StyleBI
 module: 前端UI组件
 feature_id: 72762
 feature_name: 输入标签功能增强
+issue_link: [http://173.220.179.100/issues/72762](http://173.220.179.100/issues/72762)
 pr_link: [[https://github.com/inetsoft-technology/stylebi/pull/2699]](https://github.com/inetsoft-technology/stylebi/pull/2699])
+assignee: Franky Pan
+target_version: stylebi-1.1.0
 last_updated: 2026-03-09
 
 # 1 Feature Summary
@@ -103,12 +106,12 @@ label新增接口或属性需同步更新API文档，回归脚本支持
 
 | Bug ID     | Description           | Status |
 | ---------- | --------------------- | ------ |
-| Bug #74052 | label状态未同步变灰          | Open   |
-| Bug #74050 | 超长label文本排版异常         | Open   |
-| Bug #74044 | label编辑导致内容丢失         | Open   |
-| Bug #74051 | label本地化资源缺失          | Open   |
-| Bug #74049 | printLayout场景label不显示 | Open   |
-| Bug #74042 | label脚本API事件未同步       | Open   |
+| Bug #74052 | label状态未同步变灰          | closed |
+| Bug #74050 | 超长label文本排版异常         | closed  |
+| Bug #74044 | label编辑导致内容丢失         | closed   |
+| Bug #74051 | label本地化资源缺失          | closed  |
+| Bug #74049 | printLayout场景label不显示 | closed   |
+| Bug #74042 | label脚本API事件未同步       | closed   |
 
 
 ---
