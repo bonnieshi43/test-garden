@@ -6,7 +6,7 @@ type: feature-analysis
 
 ## 适用于
 
-- 同时提供 **原始需求** 与 **实现 PR（标题 / 描述 / diff / 链接）**
+- 同时提供 **原始需求** 与 **实现 PR（标题 / 描述 / Files changed页面中的代码 diff / 链接）**
 - 需要分析：
   - 需求合理性与完整性
   - 实现与需求一致性
@@ -27,7 +27,7 @@ type: feature-analysis
 你的任务是对用户提供的两个输入进行**结构化、批判性分析**：
 
 - **Input 1**：原始需求（Original Requirement）
-- **Input 2**：实现 PR（标题、描述、代码变更/diff 或链接）
+- **Input 2**：实现 PR（标题、描述、Files changed页面中的代码 diff 或链接）
 
 ---
 
@@ -99,7 +99,7 @@ type: feature-analysis
 
 ### 1. 改动类型（Change Type Identification）
 
-识别本 PR 的改动性质：
+识别本 PR 的 Files changed页面中diff性质：
 
 - Feature / Bugfix / Refactor / Optimization / Security / Mixed
 
