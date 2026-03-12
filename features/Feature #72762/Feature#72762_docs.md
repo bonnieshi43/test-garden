@@ -1,18 +1,21 @@
-## doc_type: feature-test-doc
-
-product: StyleBI
-module: 前端UI组件
-feature_id: 72762
-feature_name: 输入标签功能增强
-issue_link: [http://173.220.179.100/issues/72762](http://173.220.179.100/issues/72762)
-pr_link: [[https://github.com/inetsoft-technology/stylebi/pull/2699]](https://github.com/inetsoft-technology/stylebi/pull/2699])
-assignee: Franky Pan
-target_version: stylebi-1.1.0
-last_updated: 2026-03-09
+---
+doc_type: feature-test-doc
+product: <你的产品名：StyleBI 或其他>
+module: Input Components
+feature_id: #74041
+feature: 输入组件可配置 input label 与 spacing（TextInput/Combobox/Slider/Spinner）
+issue_link: [http://173.220.179.100/issues/72762]
+pr_link: [[https://github.com/inetsoft-technology/stylebi/pull/2699]]
+Assignee: Franky Pan
+last_updated: 2026-03-12
+version: stylebi-1.1.0
+---
 
 # 1 Feature Summary
 
-为 TextInput、Combobox、Slider 和 Spinner 组件新增 input label 属性。目标提升表单组件的信息表达能力及交互性，用户可直观看到输入对象含义，支持 label 显示、隐藏与动态编辑。重点解决控件缺乏标签导致的体验与易用性问题，但目前 label 行为存在边界限制（仅单行、不可自定义位置），部分极端情况尚未覆盖。
+为 TextInput、Combobox、Slider 和 Spinner 组件新增 input label 功能与 spacing/padding 可控配置，避免标签文本因空间不足被截断，提升 UI 可用性与美观。解决标签因长度/空间有限被截断的问题，支持组件间距灵活配置。
+
+---
 
 # 2 Test Focus
 
@@ -20,99 +23,78 @@ last_updated: 2026-03-09
 
 ## P0 - Core Path
 
-- 输入控件新增 label 属性的显示和隐藏功能
-- label 与控件状态（enable/disable）同步
-- label 对控件布局与排版影响
-- label 与历史无label配置兼容性
+- 配置正常 label 与 spacing，label 展示完整，不被截断
+- 输入组件 label 与控件排版无错位
 
 ## P1 - Functional Path
 
-- 超长/特殊字符 label 文本处理与排版
-- label 编辑与控件联动（如位置变更导致内容丢失）
-- printLayout、导出等场景下 label 显示与隐藏
-- label 与 Script、事件接口的一致性（脚本接口同步、事件触发等）
-- label 国际化本地化切换
-- 多控件组合下 label 联动
+- 边界情况：label为空、超长、特殊字符
+- 多对象交互：页面多组件并列/嵌套场景 label 排版
+- UI行为：label padding 不同取值（0px、5px、20px、异常值）
 
 ## P2 - Extended Path
 
-- 批量控件渲染场景下性能影响
-- 主流浏览器与移动端布局表现一致性
+- 性能：大表单场景 label + spacing 配置响应是否流畅
+- 兼容性：历史页面升级后显示、移动端兼容
 
 ---
 
 # 3 Test Scenarios
 
-
-| ID          | Scenario     | Steps                         | Expected            | Result | Notes               |
-| ----------- | ------------ | ----------------------------- | ------------------- | ------ | ------------------- |
-| TC-LABEL-1  | Label 显示     | 为4控件添加label，页面加载              | label显示在控件预设位置，UI正常 | Pass   |                     |
-| TC-LABEL-2  | Label隐藏/同步状态 | 控件enable/disable切换，观察label表现  | label与控件同步变灰/隐藏     | Fail   | label未同步变灰，已报bug    |
-| TC-LABEL-3  | 超长label文本    | 设置超长label文本及特殊字符，页面加载         | UI无溢出，排版合理          | Fail   | 文本处理异常，已报bug        |
-| TC-LABEL-4  | Label编辑联动    | 编辑label及其position，观察input内容变化 | content不丢失，脚本自动更新   | Fail   | 编辑导致内容消失，已报bug      |
-| TC-LABEL-5  | Label国际化切换   | 切换locale，label观察多语种           | label正确切换，无资源缺失     | Fail   | 本地化资源缺失，已报bug       |
-| TC-LABEL-6  | Label导出/打印   | printLayout、导出PDF等操作          | label正确显示/隐藏        | Fail   | printlayout不显示label |
-| TC-LABEL-7  | 历史配置兼容回归     | 控件无label场景与旧版比对               | 行为一致，无异常            | Pass   |                     |
-| TC-LABEL-8  | 脚本与事件接口      | 脚本API、事件触发验证                  | label同步支持脚本、事件      | Fail   | 接口未同步，已报bug         |
-| TC-LABEL-9  | 批量控件性能       | 大表单批量渲染label，动态修改label        | 页面渲染流畅，无性能瓶颈        | Pass   |                     |
-| TC-LABEL-10 | 浏览器兼容性       | Chrome、Firefox、Edge、移动端逐一展示   | UI排版一致，交互一致         | Pass   |                     |
-
+| ID        | Scenario                | Steps                                                               | Expected                                      | Result | Notes         |
+| --------- | ----------------------- | ------------------------------------------------------------------- | --------------------------------------------- | ------ |--------------|
+| TC74041-1 | label 正常配置展示      | 新增四类输入组件，label 设短文本                                    | label 展示完整                                | Pass   |              |
+| TC74041-2 | label 超长文本展示      | label 配置超长文本                                                  | label 不被截断，UI自适应                      | Fail   | Bug #74050    |
+| TC74041-3 | label 空白展示           | label 配置为空                                                      | label 区域为空，UI正常                        | Pass   |              |
+| TC74041-4 | label 特殊字符           | label 配置特殊字符（@#￥%……）                                       | label 展示正常                                | Pass   |              |
+| TC74041-5 | padding 异常值           | padding 配置负数/极大值                                             | UI合理降级、提示或不影响排版                  | Fail   | Bug #74045    |
+| TC74041-6 | 多组件场景排版           | 页面并列多控件设置不同 label/padding                                | 排版、间距一致性，无错位                      | Fail   | Bug #74048    |
+| TC74041-7 | 状态同步                 | label 配置修改后控件显示、数据状态同步                              | 显示及时更新、数据一致                        | Fail   | Bug #74044    |
+| TC74041-8 | 控件脚本支持/导出        | 表单脚本引用、导出 label 属性                                        | 数据脚本/导出与UI一致                         | Fail   | Bug #74042    |
+| TC74041-9 | 历史页面回归             | 升级后旧页面无 label 配置展示、混合配置                              | 排版无异常，交互正常                          | Pass   | 默认为false   |
+| TC74041-10| 多语言场景               | 切换多语言环境，label 展示与自适应                                  | 多语言文本展示正常，不被截断                  | Pass   | 语言无需关注  |
 
 ---
 
 # 4 Special Testing
 
-## Security
+仅当 Feature 需要测试时执行。
 
-label仅为UI文字，无安全风险
+## Security
+无需特殊安全测试
 
 ## Performance
-
-批量控件渲染，动态label编辑已覆盖
+大表单快速操作下 label/spacing 配置无明显性能退化
 
 ## Compatibility
-
-主流浏览器与移动端测试通过
-老配置兼容测试通过，无历史异常
+多浏览器、移动端兼容性
 
 ## 本地化
-
-locale切换存在资源缺失问题，已报bug
+多语言展示场景
 
 ## script
-
-label属性未完整同步到脚本API及事件，需重点回归
+表单脚本及导出支持 label 属性
 
 ## 文档/API
-
-label新增接口或属性需同步更新API文档，回归脚本支持
+文档属性说明同步新增 label 及 spacing 参数
 
 ---
 
 # 5 Regression Impact（回归影响）
 
-可能受影响模块：
-
-- 表单编辑与构建
-- Dashboard布局
-- 导出/打印（PrintLayout/ExportPDF等）
-- 脚本自动化与事件检测
-- 国际化本地化（Locale切换）
+可能受影响模块：TextInput / Combobox / Slider / Spinner / Form组件 / Dashboard / Dataset / Export / MV 等其他模块
 
 ---
 
 # 6 Bug List
 
-
-| Bug ID     | Description           | Status |
-| ---------- | --------------------- | ------ |
-| Bug #74052 | label状态未同步变灰          | closed |
-| Bug #74050 | 超长label文本排版异常         | closed  |
-| Bug #74044 | label编辑导致内容丢失         | closed   |
-| Bug #74051 | label本地化资源缺失          | closed  |
-| Bug #74049 | printLayout场景label不显示 | closed   |
-| Bug #74042 | label脚本API事件未同步       | closed   |
-
+| Bug ID   | Description                                   | Status    |
+| -------- | --------------------------------------------- | --------- |
+| #74045   | padding 异常值处理不合适                      | Closed      |
+| #74050   | label 超长文本显示异常                        | Closed      |
+| #74048   | 多组件 label 行为不一致                       | Closed      |
+| #74044   | label 修改后 position 内容丢失                 | Closed     |
+| #74042   | script 不支持 label 属性                      | Resolved      |
+| #74043   | format 等设置下 label 不应用                   | Resolved      |
 
 ---
-
