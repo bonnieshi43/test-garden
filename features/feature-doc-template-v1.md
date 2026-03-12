@@ -10,9 +10,11 @@ last_updated: <YYYY-MM-DD>
 version: <Product Version>
 ---
 
+
 # 1 Feature Summary
 
-简要说明 Feature 的目标和新增的能力
+**核心目标**：简要说明 Feature 的目标和新增的能力
+**用户价值**：简要说明解决用户什么问题
 
 ---
 
@@ -27,13 +29,15 @@ version: <Product Version>
 ## P1 - Functional Path
 
 - 边界情况
+- 异常输入
 - 多对象交互
-- UI行为
+- UI状态变化
 
-## P2 - Extended Path
+## P2 - Extended Path （按需测试）
 
 - 性能
 - 兼容性
+- 安全
 
 ---
 
@@ -57,6 +61,7 @@ version: <Product Version>
 ## 本地化
 ## script
 ## 文档/API
+## 配置检查
 
 ---
 
