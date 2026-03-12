@@ -1,10 +1,5 @@
 # 检索策略 Prompt 规则分析与测试维度（含测试用例集）
 
-> 本文件由以下两份文档合并而成，**规则分析在前，测试用例在后**，便于统一查阅与回归测试：
->
-> - `prompts-v2/retrievers/检索策略Prompt规则分析与测试维度.md`
-> - `prompts-v2/retrievers/检索策略测试用例集.md`
-
 ---
 
 ## Part A：检索策略 Prompt 规则分析与测试维度
@@ -458,7 +453,17 @@ then:
 | C36 | 如何对商品目录和促销活动表做笛卡尔积关联？ | worksheet | false | `Crossjoin tables` | `["Crossjoin tables"]` | 笛卡尔积 → Crossjoin术语转换; 业务实体名（商品目录/促销活动表）不进改写; 单操作→不分解 |
 | C37 | How can I compare the sales performance between the East and West regions for the same quarter? | chart | false | `data comparison in chart` | `["data comparison in chart"]` | 对比/比较（非时间维度对比）→ data comparison（非date comparison）; 业务实体名（East/West regions）不进改写; 业务场景词（sales performance/quarter）不进改写; 单操作→不分解 |
 | C38 | **[History]** "How do I add color themes to a dashboard?" → answered. **[Current]** How do I export this dashboard as a PDF file? | dashboard | true | `export dashboard as PDF` | `["export dashboard as PDF"]` | 非步骤追问（无next/then/continue等关键词）+ allowContextInjection=true → 不拼接历史上下文; rewriteWithContext=true仅授权Step2步骤追问和Step3组件注入，不强制注入历史; 单操作→不分解 |
-
+| C39 | How do I show the top 10 products by sales volume but only include those with profit margin above 20%? | chart | false | `view data ranking in chart` | `["view data ranking in chart"]` | ranking与filter共存时ranking优先（chart模块，非dashboard）; Top N优先级高于阈值过滤; 业务字段名（sales volume/profit margin）不进改写; 单逻辑输出→不分解 |
+| C40 | How do I display monthly sales trends for the last 12 months? | dashboard | false | `display time series in dashboard` | `["display time series in dashboard"]` | 按月展示+趋势词但无明确对比意图 → display time series（非date comparison）; 业务场景词（last 12 months）不进改写; "trends"词汇不转为date comparison（缺对比目标）; 单操作→不分解 |
+| C41a | I want to create a bar chart and add data labels to the chart. | chart | false | `create bar chart and add data labels to bar chart` | `["create bar chart", "add data labels to bar chart"]` | 分解隔离性验证part-a：chart模块，按步骤分解，子查询保留bar chart; rewritten_query与分解结果一致 |
+| C41b | I want to create a bar chart and add data labels to the chart. | dashboard | false | `create bar chart and add data labels in chart` | `["create bar chart", "add data labels in chart"]` | 分解隔离性验证part-b：dashboard模块（同rewritten_query不同contextType），分解结果应一致（仅对象词位置不同）; 证明contextType不影响分解逻辑 |
+| C42 | How do I filter to only show values above the 50K target benchmark line? | chart | false | `add target line in chart and filter data in chart` | `["add target line in chart", "filter data in chart"]` | Target line ≠ 过滤（两者分开处理）; 阈值（50K）作为过滤条件被剥离，不改变target line转换; "above the target"表述中target line优先被识别; 业务指标名（50K benchmark）不进改写; and隐含 → 分解2条 |
+| C43 | How do I sort the data in this chart next? | dashboard | false | `sort data in chart` | `["sort data in chart"]` | 仪表板模糊操作(sort)+步骤追问关键词(next)+模块=dashboard含chart → allowContextInjection自动激活; rewriteWithContext=false但仍注入chart（仪表板模糊操作条件优先）; 非步骤追问单独处理时不拼接历史 |
+| C44 | How do I group sales by product category and also group the results by sales region? | worksheet | false | `group data by product category and group data by sales region` | `["group data by product category", "group data by sales region"]` | 多个独立group操作（不同维度）→ 分解2条（vs C14的多参数同动词不拆）; and连接 → 分解2条; 业务实体名（product category/sales region）不进改写; 两条子查询均含group data语义 |
+| C45 | In Enterprise Manager, how can I manage the users who created this dashboard and audit their permissions? | em | false | `manage user permissions and audit user access` | `["manage user permissions", "audit user access"]` | EM操作改写结果不含dashboard/chart等可视化词（即使原问题提了dashboard）; 业务实体名不进改写; 关键词"created this dashboard"被完全剥离; and连接 → 分解2条 |
+| C46 | **[History]** \"How do I create a dashboard?\" → answered with 5 turns of chart/filter discussion. \"How do I configure the portal layout?\" → answered. \"How do I set up notifications?\" → answered. **[Current]** How do I create a bar chart? | dashboard | false | `create bar chart` | `["create bar chart"]` | 长多轮对话后接完全新问题（非步骤追问）→ 不拼接历史（分解隔离性）; 改写结果不包含dashboard/portal/notification等前序问题词汇; rewriteWithContext=false + 非步骤追问 → 严禁上下文注入; 单操作→不分解 |
+| C47 | How do I \"highlight\" the top 3 products and also apply \"special formatting\" to the chart? | chart | false | `view data ranking in chart and apply special formatting in chart` | `["view data ranking in chart", "apply special formatting in chart"]` | 特殊字符（引号）处理：转义后进改写，不影响逻辑; 输出JSON格式正确，包含转义的引号; Top N → ranking（引号不改变转换逻辑）; and连接 → 分解2条 |
+| C48 | 下一步应该怎么做？ | em | false | `下一步` | `["下一步"]` | 步骤追问(下一步) + EM模块 + allowContextInjection=false → 仅基于原始输入，禁止注入任何上下文（模块词/历史词）; 改写结果不含dashboard/chart/table等可视化词; 中文问题处理一致性; 单操作→不分解 |
 ---
 
 ## 规则覆盖索引
@@ -512,7 +517,16 @@ then:
 | 历史含额外信息 → 分解结果不受历史影响 | C24 |
 | 原始问题含业务词 → 分解只基于 rewritten_query | C34 |
 | 模块上下文不影响分解结果 | C34 |
-
+| ranking与filter共存时ranking优先（非dashboard模块）| 在chart/table等其他模块验证ranking优先级 | C39 |
+| 时间序列与趋势词的灰色地带 | "trends"词不转date comparison（缺明确对比意图） | C40 |
+| 分解隔离性：contextType不影响分解 | 同一rewritten_query在不同模块的分解一致性 | C41a + C41b |
+| Target line ≠ 过滤（明确示例） | 阈值条件与目标线分别处理 | C42 |
+| 仪表板模糊操作 + 步骤追问 | 两个条件同时满足的处理 | C43 |
+| 多group操作的拆分判断 | 多维度group vs 多参数同动词 | C44 |
+| EM操作与可视化词污染防控 | EM问题中的dashboard引用被完全剥离 | C45 |
+| 长多轮对话的隔离性验证 | 不相关多轮对话后的新问题不拼接历史 | C46 |
+| 特殊字符处理和JSON转义 | 引号、符号等特殊字符的格式稳定性 | C47 |
+| 步骤追问在非dashboard模块 | EM/scheduleTask等模块的步骤追问规则 | C48 |
 ---
 
 ## 附：各 contextType 的 Case 分布
@@ -529,6 +543,10 @@ then:
 | em | C10, C21, C29 |
 | scheduleTask | C11, C23, C33 |
 | dashboardPortal | C12, C24 |
+| dashboard | C40, C41b, C43, C46 |
+| chart | C39, C41a, C42, C47 |
+| em | C45, C48 |
+| worksheet | C44 |
 
 ---
 
