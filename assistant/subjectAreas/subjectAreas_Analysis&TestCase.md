@@ -5,6 +5,8 @@
 > - Prompt: `server/prompts/subjectAreas/querySubjectAreas.prompt`
 > - Tool: `server/src/tools/retrieval/getSubjectArea.ts`
 > - Node: `server/src/agents/chatAgent/nodes/subjectAreas.ts`
+> - Notebook: `experiment/notebooks/subjectArea/querySubjectAreas.ipynb`
+> - Notebook: `experiment/notebooks/subjectArea/historyEnhancedSubjectAreas.ipynb`
 
 ---
 
@@ -336,11 +338,14 @@ contextType: scheduleTask（"schedule task"）
 | P0（必测）| trend&comparison 严格触发 | 历史高频错误，影响用户意图理解 |
 | P0（必测）| Enterprise Manager 强制覆盖 | 权限相关逻辑错误后果严重 |
 | P0（必测）| Axis 独占概念回归 | 已知历史 Bug（旧 notebook 返回 false）|
+| P0（必测）| Join / 数据类型变更双路径 | Portal 此前完全未覆盖，规则影响双模块返回 |
 | P1（重要）| Group 多模块强制 | 规则复杂，LLM 容易漏返 |
 | P1（重要）| Table 双模块原则 | 歧义场景高频出现 |
 | P1（重要）| Context 过滤 + others 回退 | 代码层逻辑 |
-| P1（重要）| preferRewriteWithContext 标记 | 影响 retrieval 策略 |
-| P1（重要）| scheduleTask contextType 路径 | 无代码层过滤，依赖优先级排序，存在 Portal/EM 被压过风险 |
+| P1（重要）| Portal 显式识别 | Portal 模块此前完全未覆盖 |
+| P1（重要）| Why / What 问题类型 | 原有 case 全为 How 类型，缺乏多样性 |
+| P1（重要）| Data Worksheet 专项（union / Named Grouping）| 仅靠 table 双模块隐性覆盖不足 |
+| P1（重要）| scheduleTask contextType 路径 | 无代码层过滤，依赖优先级排序 |
 | P2（一般）| singleModules submodule 处理 | 代码层强制处理 |
 | P2（一般）| 优先级排序 | 兜底路径 |
 | P2（一般）| 空结果兜底（非标准 contextType）| 边界保护；scheduleTask/dashboardPortal 兜底 module 为非标准名 |
@@ -370,70 +375,108 @@ contextType: scheduleTask（"schedule task"）
 # SubjectAreas 优化版回归测试集
 
 ## 目标
-在保证 **高覆盖率** 的前提下减少冗余测试用例，用于验证：
-- module 识别
-- subModule 识别
-- Enhanced Path 逻辑
+
+在保证**高覆盖率**的前提下聚焦 **Module / SubModule 识别正确性**验证。
 
 优化原则：
 - 一条规则只保留一个最具代表性的 case
 - 删除仅关键词不同但逻辑相同的 case
 - 保留复杂规则、异常规则以及历史 bug 回归场景
+- **风险场景（预期不稳定或已知代码缺陷）不计入主测试集**，单独在下方列出
 
-优化后总用例数：**14 条**
+优化后总用例数：**23 条**
 
 ---
 
-# 优化后的测试用例
+# 优化后的测试用例（OPT-01 ~ OPT-23）
 
-| CaseID | 场景说明 | contextType | User Query | 预期 Module | 预期 SubModule（Enhanced 最终结果） | explicitly_mentioned | 验证目的 |
-|------|------|------|------|------|------|------|------|
-| OPT-01 | module 语义推断基础场景 | — | How to visualize data in a dashboard view? | Dashboard | chart | false | 验证在无 context 情况下的基础语义识别 |
-| OPT-02 | module 与 subModule 同时显式提到 | dashboard | How to create a chart in the dashboard? | Dashboard | chart | true | 验证显式 module + subModule |
-| OPT-03 | module 显式但 subModule 需要语义推断 | dashboard | How to change the color of this dashboard component? | Dashboard | chart | false | 验证组件语义推断 |
-| OPT-04 | chart 独占概念识别 | chart | How to change the axis color? | Dashboard | chart | true | 验证 axis 等 chart 独占关键词 |
+| CaseID | 场景说明 | contextType | User Query | 预期 Module | 预期 SubModule | explicitly_mentioned | 验证目的 |
+|--------|---------|-------------|------------|------------|----------------|----------------------|---------|
+| OPT-01 | module 语义推断基础场景 | — | How to visualize data in a dashboard view? | Dashboard | chart | false | 验证无 context 下的基础语义识别 |
+| OPT-02 | module 与 subModule 同时显式提到 | dashboard | How to create a chart in the dashboard? | Dashboard | chart | true | 验证显式 module + subModule 识别 |
+| OPT-03 | module 显式但 subModule 需要语义推断 | dashboard | How to change the color of this dashboard component? | Dashboard | chart | false | 验证组件语义推断能力 |
+| OPT-04 | chart 独占概念识别（Axis 回归）| chart | How to change the axis color? | Dashboard | chart | true | 验证 axis 等 chart 独占关键词；历史 Bug 回归 |
 | OPT-05 | crosstab 显式识别 | crosstab | How to sort rows in a crosstab? | Dashboard | crosstab | true | 验证 crosstab 直接识别 |
-| OPT-06 | Grand Total 规则 | — | How to display the Grand Total? | Dashboard | crosstab | false | 验证多组件冲突时的优先规则 |
-| OPT-07 | freehand table 独占功能 | freehand | How to write a cell formula for custom calculation? | Dashboard | freehand table | true | 验证 freehand table 专属能力 |
-| OPT-08 | others 组件识别 | dashboard | How to add a slider to filter data? | Dashboard | others | true | 验证非核心组件分类 |
+| OPT-06 | Grand Total 规则 | — | How to display the Grand Total? | Dashboard | crosstab | false | 验证 Total 规则：排除 table，命中 crosstab |
+| OPT-07 | freehand table 独占功能 | freehand | How to write a cell formula for custom calculation? | Dashboard | freehand table | true | 验证 cell formula 等 freehand 独占概念 |
+| OPT-08 | others 组件识别 | dashboard | How to add a slider to filter data? | Dashboard | others | true | 验证 Slider 等非核心组件分类 |
 | OPT-09 | table 双 module 规则 | — | How to create a table to display records? | Dashboard / Data Worksheet | table | true | 验证 table 同属两个 module |
-| OPT-10 | trend 强关键词触发 | — | How to create a YoY comparison chart in a dashboard? | Dashboard | trend&comparison | true | 验证 YoY 触发趋势分析 |
-| OPT-11 | trend 负例验证 | — | How to display monthly sales as a time series? | Dashboard | chart | false | 避免误判为 trend |
-| OPT-12 | context 过滤 + fallback | freehand | How to configure this component? | Dashboard | freehand table | false | 验证 context filtering |
-| OPT-13 | Enterprise Manager 覆盖规则 | chart | How to create a user role for the chart module? | Enterprise Manager | — | true | 验证 EM override |
+| OPT-10 | trend 强关键词触发 | — | How to create a YoY comparison chart in a dashboard? | Dashboard | trend&comparison | true | 验证 YoY 触发 trend&comparison |
+| OPT-11 | trend 负例验证 | — | How to display monthly sales as a time series? | Dashboard | chart | false | 验证时间序列不误触发 trend |
+| OPT-12 | context 过滤 + others 回退 | freehand | How to configure this component? | Dashboard | freehand table | false | 验证 Enhanced Path：context 过滤 + others 回退 freehand |
+| OPT-13 | Enterprise Manager 强制覆盖 | chart | How to create a user role for the chart module? | Enterprise Manager | — | true | 验证 EM override，不应被 chart context 过滤掉 |
 | OPT-14 | 无匹配 fallback | — | What is the capital of France? | Dashboard | — | false | 验证完全无法识别时的 fallback |
+| OPT-15 | Portal 显式提及 | portal | How do I access the data model in the Portal? | Portal | — | true | 验证 Portal 模块显式识别；singleModule submodule 代码层为 undefined |
+| OPT-16 | Join 双路径规则（P0）| — | How do I join two worksheets together using a common field? | Data Worksheet / Portal | — / — | true / true | 验证 Join 触发双路径：同时返回 Data Worksheet + Portal，两者 explicit 均为 true |
+| OPT-17 | 数据类型变更双路径 | worksheet | How do I change the data type of a column from string to integer? | Data Worksheet / Portal | — / — | true / true | 验证数据类型变更同样触发双路径规则（规则 4.5） |
+| OPT-18 | scheduleTask 上下文 + schedule 显式问题 | scheduleTask | How do I configure an email notification for a scheduled task? | Portal | — | true | 验证 scheduleTask 上下文下显式 schedule 问题识别；代码层无过滤分支，走优先级排序 |
+| OPT-19 | "Why" 问题 — 图表诊断 | chart | Why is my bar chart not displaying the correct total values? | Dashboard | chart | true | 验证 Why 诊断类问题仍能正确识别模块；bar chart 为显式提及 |
+| OPT-20 | "What" 问题 — 双子模块识别 | — | What is the difference between a crosstab and a freehand table in a dashboard? | Dashboard | crosstab / freehand table | true | 验证 What 概念类问题对多子模块的正确识别 |
+| OPT-21 | "Why" 问题 — 权限诊断，EM 强制覆盖 | — | Why can't my team members access the dashboard I just published? | Enterprise Manager | — | true | 验证权限类 Why 问题触发 EM 强制覆盖，即使问题包含 dashboard |
+| OPT-22 | Data Worksheet — data block 显式（union）| worksheet | How do I create a union between two data blocks in my worksheet? | Data Worksheet | — | true | 验证 Concatenation 规则：union 触发 Data Worksheet，explicit=true |
+| OPT-23 | Data Worksheet — Named Grouping 显式 | worksheet | How do I create a named group to categorize product values in my worksheet? | Data Worksheet | — | true | 验证 Named Grouping 为 Data Worksheet 专属概念，explicit=true |
+
+---
+
+# 已知风险边界场景（不计入通过率）
+
+> 以下场景属于已知代码层缺陷或不稳定行为，记录于此用于问题追踪，**不纳入主测试集断言**。
+
+| CaseID | 场景说明 | contextType | User Query | 预期风险行为 | 风险原因 |
+|--------|---------|-------------|------------|-------------|---------|
+| RISK-01 | scheduleTask 上下文被 Dashboard 优先级压过 | scheduleTask | How do I configure the output format? | Portal/EM scheduled task 被 Dashboard 结果覆盖 | Dashboard score=0 > Portal/EM score=2；scheduleTask 无专属代码过滤分支 |
+| RISK-02 | scheduleTask 空结果兜底产生非标准 module 名 | scheduleTask | What time is it? | 兜底 module 被赋值为 `"schedule task"`（非标准 Module 名）| 代码为 `module: parsedContext?.contextType \|\| vsModuleName`，非标准 contextType 直接成为 module 名 |
+| RISK-03 | dashboardPortal 上下文 Portal 内容可能丢失 | dashboardPortal | How do I view a report that has been pinned to the portal? | Dashboard 优先级高，Portal 特有内容可能被忽略 | dashboardPortal 无专属代码过滤分支，依赖 LLM 感知 + 优先级排序 |
 
 ---
 
 # 覆盖范围总结
 
 ## Module 覆盖
-- Dashboard
-- Data Worksheet
-- Enterprise Manager
-- fallback
+
+| Module | 覆盖 case |
+|--------|----------|
+| Dashboard | OPT-01 ~ OPT-14、OPT-19、OPT-20 |
+| Data Worksheet | OPT-09、OPT-17、OPT-22、OPT-23 |
+| Portal | OPT-15、OPT-16、OPT-17、OPT-18 |
+| Enterprise Manager | OPT-13、OPT-21 |
+| fallback | OPT-14 |
 
 ## SubModule 覆盖
-- chart
-- crosstab
-- freehand table
-- table
-- trend&comparison
-- others
 
-## 核心识别逻辑
-已覆盖：
+| SubModule | 覆盖 case |
+|-----------|----------|
+| chart | OPT-01、OPT-02、OPT-03、OPT-04、OPT-11、OPT-19 |
+| crosstab | OPT-05、OPT-06、OPT-20 |
+| freehand table | OPT-07、OPT-12、OPT-20 |
+| table | OPT-09 |
+| trend&comparison | OPT-10 |
+| others | OPT-08 |
 
-- 显式识别
-- 语义推断
-- 独占关键词
-- 多组件冲突规则
-- context 过滤
-- fallback 逻辑
-- 负例验证
+## 核心识别逻辑覆盖
+
+| 逻辑类型 | 覆盖 case |
+|---------|----------|
+| 显式识别 | OPT-02、OPT-04、OPT-05、OPT-07、OPT-08、OPT-09、OPT-13 |
+| 语义推断 | OPT-01、OPT-03、OPT-06、OPT-11 |
+| 独占关键词 | OPT-04（axis）、OPT-07（cell formula） |
+| 多组件冲突规则 | OPT-06（Grand Total）、OPT-09（table 双模块）|
+| 双路径规则（Portal）| OPT-16（Join）、OPT-17（数据类型变更） |
+| EM 强制覆盖 | OPT-13（chart context）、OPT-21（Why 权限）|
+| context 过滤 + others 回退 | OPT-12 |
+| fallback 逻辑 | OPT-14 |
+| 负例验证 | OPT-11（trend 负例）|
+| 问题类型多样性 | OPT-19（Why 诊断）、OPT-20（What 概念）、OPT-21（Why 权限）|
+| scheduleTask 路径 | OPT-18 |
 
 ---
 
+# 推荐回归测试结构
 
+| 测试层级 | 用例数量 | 目的 |
+|--------|---------|-----|
+| P0 CI 回归 | 10 | 每次 prompt 修改快速验证（OPT-04、OPT-06、OPT-09、OPT-10、OPT-11、OPT-13、OPT-14、OPT-15、OPT-16、OPT-21）|
+| 标准回归 | 23 | 覆盖所有主要识别规则（OPT-01 ~ OPT-23）|
+| 风险场景追踪 | 3 | 已知代码缺陷观察（RISK-01 ~ RISK-03，不计入通过率）|
 
-
+当前测试集属于**标准回归测试集**。
