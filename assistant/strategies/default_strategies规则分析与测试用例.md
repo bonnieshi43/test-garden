@@ -3,7 +3,7 @@
 > 本文件由以下两份文档合并而成，**规则分析在前，测试用例在后**，便于统一查阅与回归测试：
 >
 > - `prompts-v2/retrievers/检索策略Prompt规则分析与测试维度.md`
-> - `prompts-v2/retrievers/检索策略测试用例集2.md`
+> - `prompts-v2/retrievers/检索策略测试用例集.md`
 
 ---
 
@@ -155,11 +155,26 @@
 
 ---
 
-## 三、rewriteWithContext 的判断逻辑
+## 三、rewriteWithContext 的判断逻辑与应用场景
 
-`rewriteWithContext` 是由系统外部传入的参数（布尔值），不由 prompt 内部计算决定。
+### 1. 参数定义与来源
 
-其作用是：**作为激活 `allowContextInjection` 的条件之一**。
+`rewriteWithContext` 是由系统外部传入的布尔参数，不由 prompt 内部计算决定。
+
+### 2. 触发场景（什么情况下为 true）
+
+`rewriteWithContext=true` 在以下业务场景中由系统传入：
+
+| 场景 | 说明 |
+|------|------|
+| **步骤追问场景** | 用户在对话流程中提出"下一步是什么"、"然后呢"等续问，系统识别为步骤追问后传入 `true` |
+| **仪表板模糊操作** | 用户在 Dashboard 模块提出模糊操作（如"怎样排序"、"如何筛选"），系统识别为模糊操作后传入 `true` |
+| **上下文相关性高的场景** | 系统判断当前对话上下文与用户问题高度相关，需要注入上下文以提升检索准确度时传入 `true` |
+| **多轮对话中的关联问题** | 用户问题与前序对话有明确关联（如"在这个基础上再加个..."），系统传入 `true` |
+
+### 3. 作用机制
+
+`rewriteWithContext = true` 的作用是**激活 `allowContextInjection` 开关**，但不保证一定会注入上下文。
 
 ```
 allowContextInjection = false  (default)
@@ -172,13 +187,49 @@ then:
   allowContextInjection = true
 ```
 
-`allowContextInjection = true` 后的效果：
-1. Step 2.2（步骤追问）可使用模块上下文改写
-2. Step 3（Dashboard 组件注入）可将模块组件类型追加到查询末尾
+### 4. rewriteWithContext=true 的具体效果
 
-**关键区分：**
+#### 4.1 对 Step 2.2（步骤追问处理）的影响
+
+当 `rewriteWithContext=true` 且问题被识别为步骤追问时：
+
+- **有历史流程上下文** → 改写为询问后续步骤（如"在创建图表后，下一步是什么"→"add data labels to chart"）
+- **无历史流程但 `allowContextInjection=true`** → 使用当前模块上下文改写（如在 chart 模块问"下一步"→"add formatting to chart"）
+- **无历史且 `allowContextInjection=false`** → 只基于原始输入，不拼接任何上下文
+
+#### 4.2 对 Step 3（Dashboard 组件注入）的影响
+
+当 `rewriteWithContext=true` 时，Step 3 的注入条件变为：
+
+1. `allowContextInjection = true`（已由 rewriteWithContext 激活）
+2. 当前模块包含 chart / crosstab / freehand table
+3. 用户问题对组件类型模糊
+4. 问题中未明确提及具体组件类型
+
+满足全部条件 → 从上下文提取组件关键词追加到改写结果末尾
+
+**示例：**
+- 问题："how to add labels"（模糊）
+- 模块：chart
+- `rewriteWithContext=true` → `allowContextInjection=true`
+- 结果："add data labels in chart"
+
+### 5. 与其他条件的优先级关系
+
+当多个条件同时满足时，`rewriteWithContext=true` 的优先级：
+
+| 情况 | 处理 |
+|------|------|
+| `rewriteWithContext=true` + 仪表板模糊操作 + 模块匹配 | 两个条件都激活 `allowContextInjection=true`，效果相同 |
+| `rewriteWithContext=true` + 步骤追问 + 有历史流程 | 优先使用历史流程上下文，`rewriteWithContext` 作为备选授权 |
+| `rewriteWithContext=true` + 问题已明确组件类型 | Step 3 不注入（问题已明确，不需要注入） |
+| `rewriteWithContext=true` + 模块非 chart/crosstab/freehand table | Step 3 不注入（模块不匹配） |
+
+### 6. 关键区分
+
 - `rewriteWithContext = true` 只是"授权允许注入"，不代表每次都一定会注入
-- Step 3 的注入有额外条件（问题模糊 + 已包含组件类型则不注入）
+- Step 3 的实际注入还需满足额外条件（问题模糊 + 模块匹配 + 问题未明确组件类型）
+- 即使 `allowContextInjection = true`，也只在步骤追问和 Step 3 两个特定场景使用上下文，其他问题类型严禁拼接上下文
 
 ---
 
@@ -232,6 +283,9 @@ then:
 | T5-1 | `rewriteWithContext=true` → `allowContextInjection=true` 被激活 |
 | T5-2 | `rewriteWithContext=false` + 其他条件不满足 → `allowContextInjection=false` |
 | T5-3 | `rewriteWithContext=false` + 仪表板模糊操作 + 匹配模块 → `allowContextInjection=true` |
+| T5-4 | `rewriteWithContext=true` + 步骤追问 + 有历史流程 → 优先使用历史流程上下文 |
+| T5-5 | `rewriteWithContext=true` + 问题已明确组件类型 → Step 3 不注入 |
+| T5-6 | `rewriteWithContext=true` + 非步骤追问问题 → 不拼接任何上下文（仅授权，不强制注入） |
 
 ### 维度 6：Rewrite - 禁止主动扩展
 
@@ -324,155 +378,159 @@ then:
 
 当用户在 EM 模块操作时（管理用户/组/角色），若改写结果含 dashboard/chart 等词，会导致检索结果偏向可视化文档，完全偏离用户意图。
 
-### 8. rewriteWithContext 参数理解歧义
+### 8. rewriteWithContext 参数理解歧义（高风险）
 
-`rewriteWithContext = true` ≠ 一定会注入上下文
-仅代表"开关打开"，Step 3 的实际注入还需满足额外条件（问题模糊 + 模块匹配）。
+**常见误解：**
+- `rewriteWithContext = true` ≠ 一定会注入上下文，仅代表"开关打开"
+- `rewriteWithContext = true` ≠ 所有问题都可以拼接上下文，只有步骤追问和 Step 3 可以
+- `rewriteWithContext = true` 不会覆盖"问题已明确组件类型"的判断（Step 3 仍不注入）
+
+**正确理解：**
+- `rewriteWithContext = true` 激活 `allowContextInjection = true`
+- `allowContextInjection = true` 仅授权，实际注入由具体场景规则决定
+- 即使授权，也要满足场景条件才能注入
 
 ---
 
-*文件生成时间：2026-03-10*
+*文件生成时间：2026-03-12*
 *基于 prompts-v2/retrievers/ 目录下的 prompt 文件分析*
 
+## Part B：检索策略测试用例集
+
+# 检索策略测试用例集（第四版）
+
+> 基于 `检索策略Prompt规则分析与测试维度.md` 生成，覆盖全部 contextType 与主要规则维度。
+> 生成时间：2026-03-12
+
 ---
 
-## Part B：检索策略测试用例集 2
+## 说明
 
-# 检索策略测试用例集 2
-
-> **设计原则**：每个 case 尽量覆盖多条规则（Rewrite + Decomposition + Expansion 三阶段）；不需要分解的简单 case 占总数的 1/6（共 3 条）。
->
-> **输入参数**：`question`、`contextType`、`rewriteWithContext`、`history`（多轮）
->
-> **验证目标**：`rewritten_query`（隐含）、`final_queries`
+- **总计 38 个 case**：34 个复杂问题（需要关注 rewrite/decompose 的 case）+ 4 个简单问题（≤ 1/6）
+- **语言分布**：英文 30 个（79%）、中文 8 个（21%）
+- **多轮对话**：C06、C07、C18、C24、C30、C38（以 `[History]` 标注上轮内容）
+- **rewriteWithContext 列**：该 case 的入参值（`true` / `false`）
+- **预期 rewritten_query**：仅填写改写后的查询字符串，无注释
+- **预期 final_queries**：JSON 数组，仅包含查询字符串
+- **C31–C38**：补充覆盖的遗漏测试点（T5-3、T3-3、T4-4、T10-2/T10-3、Excel转换、Crossjoin转换、data comparison、T3-4）
 
 ---
 
 ## 测试用例总表
 
-| Case ID | 用户问题 | contextType | rewriteWithContext | 预期 final_queries | 验证规则 |
-|---------|---------|-------------|:-----------------:|-------------------|---------|
-| **N01** | How to export a report as PDF? | support dashboard | false | `["export PDF report"]` | Rewrite-Step1：清晰问题仅去疑问词跳过Step2；T8-1：单操作不分解 |
-| **N02** | 我的仪表板打开特别慢，有没有什么优化方法？ | dashboard | false | `["improve dashboard loading speed"]` | T6-2：优化目标不主动扩展为功能列表；T8-4：单目标不分解 |
-| **N03** | 怎么把某个用户从角色里面移除？ | em | false | `["remove user from role"]` | T7-1：EM操作改写结果不含 dashboard/chart/table 等可视化词汇；T8-1：不分解 |
-| **C01** | 我想在图表里看销售额排名前10的客户，同时加一条平均线作为参考标准 | visualization dashboard chart | true | `["view data ranking in chart",` `"target line in chart"]` | T2-1：Top N→ranking 不转为 filter；T2-4：均值线→target line 不是 ranking；T4-1：Step3注入"chart"（两个操作均模糊）；T1：剥离业务字段/实体；T8-2：显式"同时"→分解；T9：两条子查询均保留"chart" |
-| **C02** | 我的订单表里没有客户地址，需要把客户信息表关联进来，同时只保留已完成状态的订单 | worksheet | false | `["join tables",` `"filter data"]` | T2-8："关联"→join tables；T2-2：条件过滤→filter data（不是ranking）；T1：剥离表名/字段名/业务状态；T8-2：显式"同时"→分解 |
-| **C03** | 我想按月份展示近半年的销售数据，另外也做一个今年和去年同期的同比分析 | worksheet | false | `["display time series",` `"date comparison"]` | T2-5：按月连续展示→time series（无对比意图，不转date comparison）；T2-6：同比明确对比意图→date comparison（不是time series）；T1；T8-2 |
-| **C04** | 帮我把ROI最低的三个渠道过滤出来，另外按产品类型分组展示数据 | visualization dashboard chart | true | `["view data ranking in chart",` `"group data in chart"]` | T2-3：dashboard场景"最低三个+过滤动词"→ranking优先于filter；T2：group；T1：ROI/渠道/产品类型剥离；T4-1：Step3注入"chart"；T8-2；T9：两条均保留"chart" |
-| **C05** | 为什么我在图表上设置的时间过滤条件不起作用？ | visualization dashboard chart | true | `["filter data in chart",` `"filter data in chart permission settings"]` | T2-2：过滤条件→filter data；T4-1：Step3注入"chart"（模糊操作+chart模块）；Expansion-Rule1：WHY型+操作失败→追加权限查询；T8-2：Expansion产生第2条 |
-| **C06** | 我进不去同事分享的仪表板，另外我想在仪表板里给图表加数据下钻功能 | dashboardPortal | false | `["view shared dashboard",` `"dashboard access permission settings",` `"drill down chart in dashboard"]` | Expansion-Rule2：无法访问→权限查询（非WHY型）；T2：drill down；T1；T8-2：3条查询；T9：第3条保留"dashboard"上下文 |
-| **C07** ⚡ | [多轮¹] 好，下一步是什么？另外怎么给这个图表设置数据标签？ | chart | **false** | `["create line chart subsequent steps",` `"add data labels to chart"]` | T3-1：步骤追问+历史有明确流程→allowContextInjection=true（即使rewriteWithContext=false）；T8-2：两个独立问题→分解；T9：第2条保留"chart" |
-| **C08** ⚡ | [多轮²] 第二步怎么做？然后我还想了解怎么给交叉表设置条件高亮 | visualization dashboard crosstab | true | `["create crosstab next step",` `"conditional highlight in crosstab"]` | T3-2：步骤追问+无明确历史流程+allowContextInjection=true→使用模块上下文改写；T4-1：Step3注入"crosstab"；T8-2；T9：两条均含"crosstab" |
-| **C09** | 我想让报表导出任务在数据同步完成后再自动执行，还要配置任务失败时发邮件通知 | scheduleTask | false | `["scheduler task dependency condition execution order",` `"scheduler task notification"]` | Scheduler-Rule：任务依赖查询必须包含 dependency/condition/execution order 关键词；T1：剥离具体任务名称；T8-2：两个独立功能→分解 |
-| **C10** | 我想创建一张行列完全自定义的报表，数据来源是公司的Excel文件，这两步怎么做？ | freehand | false | `["create freehand table",` `"connect Excel data source"]` | T2-9：自定义布局→freehand table（仅针对表格，非样式）；T2：Excel文件→Excel data source；T1：剥离"公司"等业务描述；T8-2：显式"两步"→分解 |
-| **C11** | 我想修改门户的显示主题颜色，另外怎么限制只有指定用户才能访问某个报表？ | portal | false | `["configure portal theme",` `"set report access permission"]` | T1：剥离"指定用户"/报表名等业务内容；T8-2：两个独立功能→分解；T9：各子查询独立可理解 |
-| **C12** | 交叉表里怎么手动调整行的显示顺序？能不能点某一行下钻到详细数据？ | crosstab | true | `["manual sort in crosstab",` `"drill down in crosstab"]` | T4-1：Step3注入"crosstab"（两个操作均模糊，未提具体组件）；T8-2：两个独立操作→分解；T9：两条均保留"crosstab" |
-| **C13** | 我需要先按季度对数据做分组汇总，然后把结果导出成Excel表 | table | false | `["aggregate data",` `"export data"]` | T2：分组汇总→aggregate data；T2：导出Excel→export data；T1：剥离"季度"维度名；T8-5：先…然后…复合步骤→分解 |
-| **C14** | 我想在仪表板上加一个饼图显示各类别占比，还要加个下拉选择器让用户按地区筛选 | dashboard | false | `["add pie chart to dashboard",` `"add filter to dashboard"]` | T2：饼图→pie chart；T2-2：下拉选择器过滤→filter data；T1：剥离"类别"/"地区"业务名；T8-2："还要"→分解；T9：两条均保留"dashboard" |
-| **C15** | 为什么我没办法编辑这个数据集？另外我也看不到某个同事发布的仪表板 | dashboard | false | `["edit dataset",` `"edit dataset permission settings",` `"view dashboard",` `"view dashboard access permission settings"]` | Expansion-Rule1：WHY+操作失败（无法编辑）→追加权限查询；Expansion-Rule2：无法查看（非WHY）→追加权限查询；T1：剥离"某个同事"等描述；T8-2：两类问题各含扩展→4条 |
+| Case ID | 用户问题 | contextType | rewriteWithContext | 预期 rewritten_query | 预期 final_queries | 验证的规则 |
+|---------|---------|-------------|-------------------|---------------------|-------------------|-----------|
+| C01 | How do I show the top 10 products by sales amount and also add an average target line to the chart? | dashboard | false | `view data ranking in chart and add target line in chart` | `["view data ranking in chart", "add target line in chart"]` | 字段名（sales amount）不进改写; Top N → view data ranking（非filter）; 均值线/目标线 → target line; and连接独立功能 → 分解2条; 分解子查询保留chart |
+| C02 | I want to create a bar chart and then add data labels to display the exact values on each bar. | chart | false | `create bar chart and add data labels to bar chart` | `["create bar chart", "add data labels to bar chart"]` | first...then结构 → 按步骤分解; 分解后子查询保留bar chart对象词 |
+| C03 | How can I join the orders table with the customers table and then group the result by region? | worksheet | false | `join tables and group data` | `["join tables", "group data"]` | join tables术语转换; 业务实体名（orders/customers/region）不进改写; first-then结构 → 分解; and连接独立功能 → 分解2条 |
+| C04 | How do I show year-over-year comparison by quarter and also apply conditional formatting to highlight values below the benchmark? | crosstab | false | `date comparison in crosstab and apply conditional formatting in crosstab` | `["date comparison in crosstab", "apply conditional formatting in crosstab"]` | year-over-year明确对比意图 → date comparison; 均值基准不转target line而是作为对比条件被剥离; and连接 → 分解2条; 子查询保留crosstab |
+| C05 | I need to create a custom layout table showing department performance metrics and group the components by business unit. | freehand | false | `create freehand table and group components` | `["create freehand table", "group components in freehand table"]` | 自定义布局表格 → freehand table; 业务实体名/业务场景词不进改写; group components（UI组件）vs group data（数据字段）区分; and连接 → 分解2条; 子查询保留freehand table |
+| C06 | **[History]** "How do I create a line chart?" → answered. **[Current]** What should I do next to configure it? | chart | true | `configure line chart` | `["configure line chart"]` | 步骤追问关键词(next) + 历史有流程 → 改写为流程续步骤; rewriteWithContext=true → allowContextInjection激活; 历史上下文优先（不直接回答步骤内容）; 单操作→不分解 |
+| C07 | **[History]** "How do I create a bar chart in the dashboard?" → answered. **[Current]** Then how do I add filters to control the data displayed? | dashboard | true | `add filters to dashboard` | `["add filters to dashboard"]` | 步骤追问关键词(then) + 历史有流程 → 续步骤改写; rewriteWithContext=true + 步骤追问 + 有历史流程 → 优先使用历史流程上下文; 单操作→不分解 |
+| C08 | How do I display monthly sales data over time and filter out records where the conversion rate is below 5%? | table | false | `display time series in table and filter data in table` | `["display time series in table", "filter data in table"]` | 按月展示+无对比意图 → display time series（非date comparison）; 阈值过滤 → filter data（非ranking）; 指标名（conversion rate）不进改写; 字段名（monthly sales）不进改写; and连接 → 分解2条 |
+| C09 | Why can't I view certain reports in the portal, and how do I configure the access permissions for different user groups? | portal | false | `view reports in portal and configure permissions in portal` | `["view reports in portal", "configure permissions in portal"]` | 业务实体名（user groups）不进改写; and连接不同操作 → 分解2条; 分解后两条子查询均保留portal |
+| C10 | 如何在 Enterprise Manager 中给用户分配角色权限，并且同时管理用户组的成员？ | em | false | `assign role to user and manage user groups` | `["assign role to user", "manage user groups"]` | EM操作改写结果不含dashboard/chart/table等可视化词; 业务实体名不进改写; and连接 → 分解2条 |
+| C11 | How do I set up a schedule task to export a dashboard report as PDF and automatically email it to the sales team every Monday? | scheduleTask | false | `configure schedule task to export dashboard as PDF and configure email notification for schedule task` | `["configure schedule task to export dashboard as PDF", "configure email notification for schedule task"]` | 业务实体名（sales team）不进改写; and连接独立功能 → 分解2条; 分解后子查询保留schedule task |
+| C12 | How do I embed a dashboard in the portal and configure interactive filter settings for the embedded view? | dashboardPortal | false | `embed dashboard in portal and configure filter settings in portal` | `["embed dashboard in portal", "configure filter settings in portal"]` | and连接独立功能 → 分解2条; 分解后两条子查询均保留portal |
+| C13 | How do I display only the top 5 highest-grossing customers who exceed the annual revenue threshold? | dashboard | false | `view data ranking in dashboard` | `["view data ranking in dashboard"]` | ranking与filter共存时dashboard模块ranking优先; Top N → view data ranking（非filter）; 业务实体名（customers）不进改写; 业务指标名（annual revenue）不进改写; 单输出→不分解 |
+| C14 | How do I group the transaction data by year and quarter to analyze seasonal business patterns? | worksheet | false | `group data by year and quarter` | `["group data by year and quarter"]` | group by year and quarter → 单条group查询（多参数共享同一动词，不拆分）; 业务场景词（seasonal patterns）不进改写; 字段名（transaction data）不进改写 |
+| C15 | How do I add labels? *(当前 chart 模块)* | chart | true | `add data labels in chart` | `["add data labels in chart"]` | rewriteWithContext=true → allowContextInjection激活; 问题模糊+模块含chart → Step3注入in chart; 单操作→不分解 |
+| C16 | How do I create a bar chart? *(上下文同时含 freehand table 组件)* | chart | true | `create bar chart` | `["create bar chart"]` | rewriteWithContext=true但问题已明确组件类型(bar chart) → Step3不注入; allowContextInjection激活但注入条件不满足（问题已明确）|
+| C17 | How do I merge the current year sales data table with the previous year sales data table using union? | worksheet | false | `union tables` | `["union tables"]` | union合并表 → union tables术语转换; 业务实体名（sales data table）不进改写; 单操作→不分解 |
+| C18 | **[History]** "如何在仪表板中添加折线图？" → answered. **[Current]** 然后如何给折线图添加数据标签？ | dashboard | true | `add data labels to line chart` | `["add data labels to line chart"]` | 步骤追问(然后) + 历史有流程 → 续步骤改写; rewriteWithContext=true + 历史优先 → 使用历史流程上下文; 单操作→不分解 |
+| C19 | I want to show total revenue and average order count aggregated by product category in a freehand table, with subtotals for each group. | freehand | false | `aggregate data in freehand table` | `["aggregate data in freehand table"]` | total/average/subtotal同属aggregate语义 → 共享同一操作不拆分; 业务实体名（product category）不进改写; 指标名（revenue/order count）不进改写 |
+| C20 | 如何在数据表中对华东区和华北区的销售额进行同比分析，并筛选出 ROI 大于 200% 的记录？ | table | false | `date comparison in table and filter data in table` | `["date comparison in table", "filter data in table"]` | 同比 → date comparison（明确对比意图）; 筛选+阈值 → filter data; 业务实体名（华东/华北）不进改写; 业务指标（ROI）不进改写; and连接 → 分解2条 |
+| C21 | 在 Enterprise Manager 中，为什么无法访问某些报表？如何重置用户密码并重新分配访问权限？ | em | false | `reset user password and assign user permissions` | `["reset user password", "assign user permissions"]` | EM操作改写不含可视化词（dashboard/chart/table等）; 业务实体名不进改写; and连接 → 分解2条 |
+| C22 | 如何先设置交叉表的行列表头，然后应用百分比计算，最后将结果导出？ | crosstab | false | `configure crosstab headers and apply percentage calculation in crosstab and export crosstab` | `["configure crosstab headers", "apply percentage calculation in crosstab", "export crosstab"]` | 先...然后...最后 → 按步骤分解3条; 每条子查询保留crosstab对象词; 子查询数量合理（≤3条）|
+| C23 | How do I configure a schedule task to first generate a worksheet report and then automatically archive it to a network storage folder? | scheduleTask | false | `configure schedule task to generate report and configure archive destination for schedule task` | `["configure schedule task to generate report", "configure archive destination for schedule task"]` | first...then → 按步骤分解; 分解后子查询保留schedule task对象词; 业务实体名（network folder）不进改写 |
+| C24 | **[History]** "How do I create a sales analysis dashboard?" → discussed chart and filter features. **[Current]** How do I configure the portal layout and set up the navigation menu? | dashboardPortal | false | `configure portal layout and configure navigation menu in portal` | `["configure portal layout", "configure navigation menu in portal"]` | 历史中的dashboard/chart内容不影响当前portal问题的分解（分解隔离性）; and连接 → 分解2条; 两条子查询保留portal |
+| C25 | Where can I find the report subscription settings and how do I configure email notification preferences in the portal? | portal | false | `configure report subscription in portal and configure email notification preferences in portal` | `["configure report subscription in portal", "configure email notification preferences in portal"]` | and连接不同操作 → 分解2条; 分解后两条子查询保留portal; 业务实体名不进改写 |
+| C26 | How do I improve dashboard loading speed? | dashboard | false | `improve dashboard loading speed` | `["improve dashboard loading speed"]` | 优化目标类查询 → 不展开为具体功能列表; 单目标→不分解 |
+| C27 | What is a freehand table in StyleBI? | freehand | false | `freehand table` | `["freehand table"]` | 单概念查询→不分解; 改写仅保留核心功能术语 |
+| C28 | How do I sort the data displayed in a chart? | chart | false | `sort data in chart` | `["sort data in chart"]` | rewriteWithContext=false → allowContextInjection=false; allowContextInjection=false + 模块含chart + 问题模糊 → Step3不注入; 单操作→不分解 |
+| C29 | What are the available user role types in Enterprise Manager? | em | false | `user roles` | `["user roles"]` | EM操作改写结果不含dashboard/chart等可视化词; 单概念→不分解 |
+| C30 | **[History]** 无相关历史流程。**[Current]** 下一步是什么？ | worksheet | true | `configure worksheet` | `["configure worksheet"]` | 步骤追问 + 无历史 + allowContextInjection=true → 使用模块上下文（contextType=worksheet）改写; 对比T3-3：若allowContextInjection=false则不注入 |
+| C31 | How do I sort the data? *(dashboard 模块含 chart 组件，rewriteWithContext=false)* | dashboard | false | `sort data in chart` | `["sort data in chart"]` | rewriteWithContext=false时，仪表板模糊操作+模块含chart+动作与模块匹配 → allowContextInjection自动激活; 上下文注入chart对象词; 非步骤追问不拼接历史 |
+| C32 | What's the next step? | crosstab | false | `next step` | `["next step"]` | 步骤追问 + allowContextInjection=false → 仅基于原始输入，禁止拼接模块或历史上下文; 改写结果不引入任何上下文词 |
+| C33 | How do I configure the settings? *(rewriteWithContext=true，模块为 scheduleTask)* | scheduleTask | true | `configure schedule task settings` | `["configure schedule task settings"]` | allowContextInjection=true但模块非chart/crosstab/freehand table → Step3四条件不满足，不注入; 单操作→不分解 |
+| C34 | How do I filter the Q1 revenue data by product line and add a reference line showing the annual target on the chart? | chart | false | `filter data in chart and add target line in chart` | `["filter data in chart", "add target line in chart"]` | 分解阶段唯一输入是rewritten_query（Q1/revenue/product line等原始业务词不影响分解）; chart模块上下文不影响分解逻辑; 子查询保留chart对象词 |
+| C35 | 我想把 Excel 文件中的数据导入到工作表中进行分析，应该怎么操作？ | worksheet | false | `Excel data source` | `["Excel data source"]` | Excel数据/文件 → Excel data source术语转换; 单操作→不分解 |
+| C36 | 如何对商品目录和促销活动表做笛卡尔积关联？ | worksheet | false | `Crossjoin tables` | `["Crossjoin tables"]` | 笛卡尔积 → Crossjoin术语转换; 业务实体名（商品目录/促销活动表）不进改写; 单操作→不分解 |
+| C37 | How can I compare the sales performance between the East and West regions for the same quarter? | chart | false | `data comparison in chart` | `["data comparison in chart"]` | 对比/比较（非时间维度对比）→ data comparison（非date comparison）; 业务实体名（East/West regions）不进改写; 业务场景词（sales performance/quarter）不进改写; 单操作→不分解 |
+| C38 | **[History]** "How do I add color themes to a dashboard?" → answered. **[Current]** How do I export this dashboard as a PDF file? | dashboard | true | `export dashboard as PDF` | `["export dashboard as PDF"]` | 非步骤追问（无next/then/continue等关键词）+ allowContextInjection=true → 不拼接历史上下文; rewriteWithContext=true仅授权Step2步骤追问和Step3组件注入，不强制注入历史; 单操作→不分解 |
 
 ---
 
-## 多轮对话历史说明
+## 规则覆盖索引
 
-### ⚡ C07 历史记录（rewriteWithContext=false 的特殊场景）
-
-```
-轮次1 用户: 我想创建一个折线图，步骤是什么？
-轮次1 助手: 创建折线图的步骤如下：
-          步骤1：在工作表中选择数据绑定字段...
-          步骤2：切换到图表类型面板，选择折线图...
-轮次2 用户: 好，下一步是什么？另外怎么给这个图表设置数据标签？  ← 当前问题
-```
-
-**验证关键点**：`rewriteWithContext = false`，但由于"步骤追问 + 历史有明确操作流程"这一条件成立，`allowContextInjection` 应自动置为 `true`。改写第一部分应引用历史流程（折线图创建步骤），而不是依赖 `rewriteWithContext` 参数。
-
----
-
-### ⚡ C08 历史记录（无明确操作流程的多轮场景）
-
-```
-轮次1 用户: 交叉表有什么用？
-轮次1 助手: 交叉表是一种用于展示多维度数据汇总的组件，支持行列分组显示...
-轮次2 用户: 第二步怎么做？然后我还想了解怎么给交叉表设置条件高亮  ← 当前问题
-```
-
-**验证关键点**：历史中没有清晰的操作步骤流程，但 `rewriteWithContext = true`，`allowContextInjection = true`，步骤追问应使用 `contextType`（crosstab）作为上下文改写，而不是直接回答步骤内容。
-
----
-
-## 覆盖率矩阵
-
-### contextType 覆盖
-
-| contextType | Case |
-|-------------|------|
-| support dashboard | N01 |
-| dashboard | N02, C14, C15 |
-| em | N03 |
-| visualization dashboard chart | C01, C04, C05 |
-| worksheet | C02, C03 |
-| dashboardPortal | C06 |
-| chart | C07 |
-| visualization dashboard crosstab | C08 |
-| scheduleTask | C09 |
-| freehand | C10 |
-| portal | C11 |
-| crosstab | C12 |
-| table | C13 |
-
-### 问题类型覆盖
-
-| 问题类型 | Case |
-|---------|------|
-| How（操作方法） | N01, N02, N03, C01, C02, C03, C04, C07, C08, C09, C10, C11, C12, C13, C14 |
-| Why（原因追问） | C05, C15 |
-| Cannot access/view（权限类） | C06, C15 |
-| Step inquiry（步骤追问，多轮） | C07, C08 |
-
-### 分解类型覆盖
-
-| 分解场景 | Case |
-|---------|------|
-| 不需要分解（1/6） | N01, N02, N03 |
-| 显式 and/同时/还要 → 分解 | C01, C02, C04, C11, C14 |
-| 先…然后… 复合步骤 → 分解 | C13 |
-| 步骤追问 + 其他问题 → 分解 | C07, C08 |
-| WHY Expansion 产生多条 | C05, C15 |
-| 不能访问 Expansion 产生多条 | C06, C15 |
-| 多独立功能 → 分解 | C03, C09, C10, C12 |
-
-### 核心规则覆盖
-
-| 规则 | Case |
-|------|------|
-| Rewrite-Step1（清晰问题仅去疑问词） | N01 |
-| T2-1（排名不转过滤） | C01, C04 |
-| T2-2（条件过滤不转排名） | C02, C05 |
-| T2-3（dashboard场景排名优先） | C04 |
-| T2-4（target line ≠ ranking/filter） | C01 |
-| T2-5（时间展示→time series，不转date comparison） | C03 |
-| T2-6（明确同比→date comparison） | C03 |
-| T2-8（关联多表→join tables） | C02 |
-| T2-9（自定义布局→freehand table） | C10 |
-| T1（业务内容剥离） | C01~C15 全部 |
-| T3-1（步骤追问+历史→allowContextInjection=true，覆盖rewriteWithContext=false） | C07 |
-| T3-2（步骤追问+无历史+allowContextInjection→模块上下文） | C08 |
-| T4-1（Step3：模糊操作+组件模块→注入组件类型） | C01, C04, C05, C08, C12 |
-| T4-2（Step3：已明确组件→不注入）| 在 C07 第2部分验证（"这个图表"已含chart） |
-| T6-2（优化目标不扩展） | N02 |
-| T7-1（EM操作不含可视化词） | N03 |
-| Scheduler-Rule（依赖查询必含dependency等关键词） | C09 |
-| T8-1（单操作不分解） | N01, N02, N03 |
-| T8-2（显式多功能→分解） | C01, C02, C04, C06, C07, C08, C14 |
-| T8-4（单目标不分解） | N02 |
-| T8-5（first…then…→分解） | C13 |
-| T9（分解后保留关键对象上下文） | C01, C04, C06, C07, C08, C12, C14 |
-| Expansion-Rule1（WHY+操作失败→权限查询） | C05, C15 |
-| Expansion-Rule2（无法访问→权限查询） | C06, C15 |
+| 规则 | 描述 | 覆盖的 Case |
+|------|------|-----------|
+| 字段名剥离 | 改写结果不含具体字段名 | C01, C08, C14, C19, C20 |
+| 实体名剥离 | 改写结果不含业务实体名 | C03, C05, C09, C10, C11, C17, C20, C21, C23, C25, C36, C37 |
+| 指标名剥离 | 业务指标（ROI/转化率等）→ 通用操作词 | C08, C19, C20, C37 |
+| 场景词剥离 | 业务场景描述不进改写 | C05, C14, C37 |
+| Top N → view data ranking（非filter） | C01, C13 |
+| ranking与filter共存时ranking优先（dashboard）| C13 |
+| 过滤/筛选 → filter data（非ranking）| C08, C20 |
+| 均值线/目标线/基准线 → target line | C01, C04, C34 |
+| 按时间展示（无对比意图）→ display time series（非date comparison）| C08 |
+| 同比/环比/year-over-year → date comparison（明确对比意图）| C04, C20 |
+| 对比/比较（非时间维度）→ data comparison | C37 |
+| group by 多参数同动词 → 单条 group 查询（不拆分）| C14 |
+| join 表 → join tables | C03 |
+| union 表 → union tables | C17 |
+| 笛卡尔积 → Crossjoin | C36 |
+| 自定义布局表格 → freehand table | C05 |
+| Excel数据/文件 → Excel data source | C35 |
+| aggregate（total/average/subtotal共享语义）→ aggregate data（不拆分）| C19 |
+| group components（UI组件）vs group data（数据字段）| C05 |
+| 步骤追问 + 历史有流程 → 续步骤改写，不直接回答 | C06, C07, C18 |
+| 步骤追问 + 无历史 + allowContextInjection=true → 模块上下文改写 | C30 |
+| 步骤追问 + allowContextInjection=false → 仅原始输入，不拼接上下文 | C32 |
+| 非步骤追问 + allowContextInjection=true → 不拼接历史上下文 | C38 |
+| allowContextInjection=true + 模块=chart + 问题模糊 → Step3注入 in chart | C15 |
+| allowContextInjection=true + 问题已明确组件类型 → Step3不注入 | C16 |
+| allowContextInjection=false + 问题模糊 → Step3不注入 | C28 |
+| allowContextInjection=true + 模块非chart/crosstab/freehand → Step3不注入 | C33 |
+| rewriteWithContext=true → allowContextInjection 激活 | C06, C07, C15, C16, C18, C30, C33, C38 |
+| rewriteWithContext=false + 其他条件不满足 → allowContextInjection=false | C28 |
+| rewriteWithContext=false + 仪表板模糊操作+匹配模块 → allowContextInjection自动激活 | C31 |
+| rewriteWithContext=true + 步骤追问 + 有历史流程 → 优先历史流程上下文 | C06, C18 |
+| rewriteWithContext=true + 问题已明确组件类型 → Step3不注入 | C16 |
+| rewriteWithContext=true + 非步骤追问 → 不拼接历史上下文（仅授权）| C07, C15, C38 |
+| 优化目标类查询 → 不展开为功能列表 | C26 |
+| 问题只提一个操作 → 不引入额外功能 | C27 |
+| EM 操作改写不含 dashboard/chart/table 等可视化词 | C10, C21, C29 |
+| 单操作/单概念 → final_queries 只有1条 | C06, C07, C13, C14, C15, C16, C17, C18, C19, C26, C27, C28, C29, C30, C31, C32, C33, C35, C36, C37, C38 |
+| and连接两个独立功能 → 拆为2条子查询 | C01, C03, C04, C05, C09, C10, C11, C12, C20, C21, C23, C24, C25 |
+| group by 多参数同动词 → 不拆（保守原则）| C14 |
+| 优化目标类查询 → 不拆，不扩展 | C26 |
+| first...then / 先...然后 → 按步骤拆分 | C02, C03, C22, C23 |
+| 分解后子查询保留关键对象词（如 chart、dashboard）| C01, C02, C04, C05, C11, C22, C23, C34 |
+| 分解后两条子查询均含父对象（如 portal、dashboard）| C09, C12, C24, C25 |
+| 分解后每条子查询独立可理解 | C22 |
+| 历史含额外信息 → 分解结果不受历史影响 | C24 |
+| 原始问题含业务词 → 分解只基于 rewritten_query | C34 |
+| 模块上下文不影响分解结果 | C34 |
 
 ---
 
-*生成日期：2026-03-10*
-*参考文件：`prompts-v2/retrievers/default_strategies.prompt`、`rewrite_rule.prompt`、`decomposition_rule.prompt`、`minor_expansion.prompt`*
+## 附：各 contextType 的 Case 分布
 
+| contextType | Case IDs |
+|-------------|---------|
+| dashboard | C01, C07, C13, C18, C24（history）, C26, C31, C38 |
+| worksheet | C03, C14, C17, C30, C35, C36 |
+| freehand | C05, C19, C27 |
+| table | C08, C20 |
+| chart | C02, C06, C15, C16, C28, C34, C37 |
+| crosstab | C04, C22, C32 |
+| portal | C09, C25 |
+| em | C10, C21, C29 |
+| scheduleTask | C11, C23, C33 |
+| dashboardPortal | C12, C24 |
+
+---
+
+*文件生成时间：2026-03-12*
+*规则来源：检索策略Prompt规则分析与测试维度.md*
