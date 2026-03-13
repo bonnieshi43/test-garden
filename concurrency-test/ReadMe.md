@@ -22,9 +22,7 @@
 
 - 创建 org-ci2（clone host-org）/ ci2（success123），授予 ci2（Org Admin）role
 
-- 执行 Scenario_multi_org_with_shared_assets.py case 时：需要在 EM properties 
-
-  中配置"security.exposedefaultorgtoall=true"
+- 执行 Scenario_multi_org_with_shared_assets.py case 时：需要在 EM properties 中配置"security.exposedefaultorgtoall=true"
 
 
 
@@ -39,6 +37,10 @@ python -m locust -f Secnario1.py
 ```
 
 > 说明：将上述命令在终端中执行，将启动 Locust 并加载 `Secnario1.py` 测试场景。
+
+
+
+
 
 
 
