@@ -1,7 +1,7 @@
 ---
 doc_type: feature-test-doc
 product: StyleBI
-module: <module-name>
+module: chart
 feature_id: 74102
 feature: Feature #74102 Bar chart rounded corners
 pr_link: https://github.com/inetsoft-technology/stylebi/pull/3047
