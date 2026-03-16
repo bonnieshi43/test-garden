@@ -8,7 +8,7 @@ components:
 type: dashboard-design-chart
 tags:
  - chart
-source: (https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/viewsheet/ChartTypes.html)
+source: https://www.inetsoft.com/docs/stylebi/InetSoftUserDocumentation/1.0.0/viewsheet/ChartTypes.html
 
 ---
 
