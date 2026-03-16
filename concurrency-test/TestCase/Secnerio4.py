@@ -263,5 +263,5 @@ class ProductAPIUser(HttpUser):
 if __name__ == "__main__":
     import os
 
-    os.system("locust -f Scenario3_vs_export_mixed.py")
+    os.system("locust -f Secnerio4.py")
 
