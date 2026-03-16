@@ -1,6 +1,7 @@
 # 遗漏测试内容
 1.设置了属性后组织copy Bug #74075
 2.不同组织设置不同的值的应用
+3.properties 的auto-complete
 
 ## 一、需求分析（Requirement Analysis）
 
