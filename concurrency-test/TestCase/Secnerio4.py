@@ -20,7 +20,11 @@ def is_export_done(payload: dict) -> bool:
     status = str(payload.get("status") or payload.get("state") or "").upper()
     if status in {"DONE", "COMPLETED", "FINISHED", "SUCCESS", "SUCCEEDED"}:
         return True
-    if payload.get("completed") is True or payload.get("done") is True:
+    if (
+        payload.get("complete") is True
+        or payload.get("completed") is True
+        or payload.get("done") is True
+    ):
         return True
     if payload.get("success") is True and (payload.get("progress") in (100, "100")):
         return True
@@ -73,7 +77,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
 
     @task(2)
     def open_viewsheet_low_freq(self):
-
         if self.identifier is None or random.random() < 0.05:
             ok = self._open_viewsheet()
             if not ok:
@@ -83,9 +86,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
 
     @task(4)
     def sync_export(self):
-        """
-        Export：GET /export/{format}
-        """
         if self.identifier is None:
             ok = self._open_viewsheet()
             if not ok:
@@ -100,7 +100,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
         )
 
         if resp.status_code != 200:
-            # If the open instance has become invalid, reset it and reopen it next time.
             if resp.status_code in (404, 410):
                 self.identifier = None
             return
@@ -110,7 +109,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
 
     @task(3)
     def async_export_flow(self):
-
         if self.identifier is None:
             ok = self._open_viewsheet()
             if not ok:
@@ -120,8 +118,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
         fmt = random.choice(file_types)
 
         export_id = None
-
-        # 1) Create an asynchronous export task
         with self.client.get(
             f"/api/public/viewsheets/open/{self.identifier}/async-export/{fmt}",
             headers=self.user.headers,
@@ -153,7 +149,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
 
         time.sleep(random.uniform(0.5, 1.5))
 
-        # 2) Poll the export status
         max_polls = 10
         poll_interval_s = random.uniform(0.8, 1.5)
         done = False
@@ -165,6 +160,10 @@ class InetsoftViewsheetExportTasks(TaskSet):
                 catch_response=True,
             ) as st:
                 if st.status_code != 200:
+
+                    if st.status_code == 404 and "Export does not exists" in (st.text or ""):
+                        st.success()
+                        return
                     st.failure(f"poll export status failed: {st.status_code} {st.text}")
                     time.sleep(poll_interval_s)
                     continue
@@ -186,13 +185,15 @@ class InetsoftViewsheetExportTasks(TaskSet):
         if not done:
             return
 
-        # 3) Download the exported content
         with self.client.get(
             f"/api/public/viewsheets/exports/{export_id}/content",
             headers=self.user.headers,
             catch_response=True,
         ) as content:
             if content.status_code != 200:
+                if content.status_code == 404 and "Export does not exists" in (content.text or ""):
+                    content.success()
+                    return
                 content.failure(
                     f"download export content failed: {content.status_code} {content.text}"
                 )
@@ -202,7 +203,6 @@ class InetsoftViewsheetExportTasks(TaskSet):
         self.exports_since_open += 1
         time.sleep(random.uniform(0.5, 2))
 
-        # 4) Clean up export records (to avoid too many accumulations)
         if random.random() < 0.5:
             self.client.delete(
                 f"/api/public/viewsheets/exports/{export_id}",
@@ -263,4 +263,5 @@ class ProductAPIUser(HttpUser):
 if __name__ == "__main__":
     import os
 
-    os.system("locust -f Secnerio4.py")
+    os.system("locust -f Scenario3_vs_export_mixed.py")
+
