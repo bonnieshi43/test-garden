@@ -1,7 +1,14 @@
 
-| doc_type | product | module | feature_id | feature | pr_link | Assignee | last_updated | version |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| feature-test-doc | StyleBI | Composer / Properties / Script Pane | Feature #72691 | Script editor opens to bottom of script | https://github.com/inetsoft-technology/stylebi/pull/2294 | Franky Pan | 2026-03-10 | 14.0|
+doc_type: feature-test-doc
+product: StyleBI
+module: Composer / Properties / Script Pane
+feature_id: 72691
+feature: Feature #72691 Script editor opens to bottom of script
+pr_link: https://github.com/inetsoft-technology/stylebi/pull/2294
+Assignee: Franky Pan 
+last_updated: 2026-03-10
+version: 14.0
+---
 
 # 1 Feature Summary
 
