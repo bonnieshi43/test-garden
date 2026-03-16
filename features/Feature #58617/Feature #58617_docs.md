@@ -6,7 +6,7 @@ feature: Enables search box in Selection Container “Add Filter” dialog
 pr_link: https://github.com/inetsoft-technology/stylebi/pull/2779
 Assignee: milotalon
 last_updated: 2026-03-10
-version: <Product Version>
+version: stylebi-1.1.0
 ---
 
 # 1 Feature Summary
