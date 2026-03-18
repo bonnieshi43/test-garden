@@ -5,7 +5,7 @@ module: dashboard-chart
 feature_id: 72760
 feature: Feature #72760 Enable setting hyperlink on chart titles and empty plot area
 pr_link: https://github.com/inetsoft-technology/stylebi/pull/2489
-Assignee: FigurePaper
+Assignee: Franky Pan
 last_updated: 2026-03-13
 version: 14.0
 ---
