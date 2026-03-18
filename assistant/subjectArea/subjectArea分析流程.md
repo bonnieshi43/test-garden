@@ -23,8 +23,8 @@ explicitly_mentioned: <true|false>
 2. explicitly_mentioned 判定规则
     - 什么情况是 true
     - 什么情况是 false
-      3.其他所有跟测试用例目标相关的规则
-      4.code层的增强逻辑
+3.其他所有跟测试用例目标相关的规则
+4.code层的增强逻辑
 
 最后请输出为结构化 Markdown，保存到本地，方便我做测试分析文档。
 ````
