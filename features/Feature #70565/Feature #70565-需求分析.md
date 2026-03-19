@@ -66,7 +66,7 @@
 
 | # | 风险点 | 风险类型 | 说明 |
 |---|---|---|---|
-| 1 | **SVG 恶意脚本注入** | **Security** | SVG 可内嵌 JavaScript，若未进行内容清理，可能导致 XSS 攻击 |
+| 1 | **SVG 恶意脚本注入** | **Security** | SVG 可内嵌 JavaScript，若未进行内容清理，可能导致 XSS 攻击 |  
 | 2 | **SVG 文件大小无限制** | **Performance** | 未定义 SVG 文件大小限制，可能导致上传超大文件影响系统 |
 | 3 | **SVG 复杂渲染性能** | **Rendering** | 复杂 SVG（大量路径、滤镜、阴影）在图表中批量渲染时可能卡顿 |
 | 4 | **SVG 在导出场景的支持** | **Data Consistency** | 图表导出为 PDF/Image 时，SVG Shape 的渲染结果是否正确保留 |
@@ -75,6 +75,8 @@
 | 7 | **与现有 Shape 的交互** | **Cross-Module** | 同一图表中混用 JPG/PNG 和 SVG Shape，是否存在冲突或渲染不一致 |
 | 8 | **Dashboard 过滤、钻取后 SVG 刷新** | **Functional** | 图表数据变化（过滤/钻取）后，SVG Shape 是否正确刷新或保持一致 |
 | 9 | **从低版本升级时的兼容性** | **Compatibility** | 低版本报表中的 Shape 在新版本中是否正确识别和加载 |
+
+🔴 **测试-分析**： SVG 恶意脚本注入这个我们不支持，直接不执行script标记
 
 ---
 
@@ -103,6 +105,7 @@
 - ✅ Security / Auth（权限和安全） 🔴 **测试-分析**：可忽略
 
 **专项检查**：
+- **本地户**：对于upload 错误的应对提示测试语言    🔴 **测试-分析**：需要测试管理的upload提示需要增加可支持gif & upload empty弹出提示需要本地化
 - **脚本兼容性**：若 UI 中有 Script 逻辑依赖 Shape 类型判断（如 `if shape.format == 'PNG'`），需验证是否需要扩展支持 'SVG'  🔴 **测试-分析**：本身不支持，所以可忽略
 - **向后兼容**：已发布报表中的 JPG/PNG Shape 在新版本中是否仍正常显示 🔴 **测试-分析**：可忽略
 - **文档一致性**：Shape 支持格式的官方文档是否已更新  
@@ -151,7 +154,7 @@
 - ✅ 存储持久化
 - ✅ 基础渲染
 
-🔴 **Test Result**：fail
+🔴 **Test Result**：pass，但存在以下问题
 - upload some svg image, show empty（Bug #74031）
 
 ---
@@ -192,7 +195,7 @@
 - ✅ SVG 恶意脚本注入风险
 - ✅ 系统安全防护
 
-🔴 **Test Result**：fail
+🔴 **Test Result**：ignore，已经验证不支持
 - The SVG file contains malicious code that was able to be uploaded successfully（Bug #74068）
 
 ---
@@ -231,7 +234,7 @@
 - ✅ 混合格式渲染一致性
 - ✅ 渲染性能
 
-🔴 **Test Result**：fail
+🔴 **Test Result**：pass，存在一些bug
 - add and apply shape， background server pop up error（Bug #74078）
 
 ---
@@ -268,8 +271,8 @@
 - ✅ SVG 文件大小无限制风险
 - ✅ 系统性能和稳定性
 
-🔴 **Test Result**：未验证
-- 需要等其他bug改了，验证大的svg情况
+🔴 **Test Result**：pass，没有限制，已经测试到20MB也好着
+
 ---
 
 ### **Scenario 5：SVG 在图表导出中的表现**   🔴 **测试-分析**：覆盖了导出
@@ -342,7 +345,7 @@
 - ✅ 数据一致性
 - ✅ Dashboard 与 Chart 的交互一致性
 
-🔴 **Test Result**: fail（优化了知识库）
+🔴 **Test Result**: pass（优化了知识库），存在一些bug
 - do brush actions, svg shape color is not rightly（Bug #74065）
 - do exclude/drill/exclude/datatipview actions, svg shape can't be exclude （Bug #74066）
 
@@ -380,8 +383,7 @@
 - ✅ SVG 复杂渲染性能风险
 - ✅ 系统性能和可用性
 
-🔴 **Test Result**：未验证
-- 需要等其他bug改了，验证性能
+🔴 **Test Result**：pass，性能还可以
 
 ---
 
@@ -415,7 +417,7 @@
 - ✅ 浏览器兼容性差异风险
 - ✅ 跨浏览器一致性
 
-🔴 **Test Result**：pass
+🔴 **Test Result**：pass，svg不支持默认size
 - default size of svg can't apply（不支持）
 - 主流浏览器pass
 
@@ -520,7 +522,7 @@
 **Risk Covered**：
 - ✅ 文件格式验证的严密性
 
-🔴 **Test Result**： fail
+🔴 **Test Result**： pass，改动后会弹出不能上传empty的svg
 - upload svg(empty/invalid), show broken image and pop up error on background server（Bug #74029）
 
 ---
