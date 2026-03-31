@@ -37,7 +37,7 @@ CHAT_APP_INTERNAL_URL 为空  →  Direct 模式（使用 CHAT_APP_SERVER_URL）
 
 ### 配置（`.env`）
 
-```ini
+```properties
 CHAT_APP_SERVER_URL=http://localhost:3002
 # CHAT_APP_INTERNAL_URL 不设置
 ```
@@ -127,123 +127,259 @@ CHAT_APP_SERVER_URL=http://localhost:8080/api/assistant/proxy  # 浏览器侧代
 
 ---
 
-## 模式三：ECS + VM — 真实域名直连模式
+## 模式四：ECS + VM 
 
-### 部署拓扑
+### Proxy 模式
 
-```
-StyleBI  →  AWS ECS（多实例）
-Assistant → 独立 VM（Docker 启动 assistant-server）
-              └── 反向代理（nginx/caddy）→ 真实域名（CA 签名证书）
-```
-
-### 架构图
-
-```
-[用户浏览器]
-    │
-    ├──→ https://stylebi.example.com  (ECS)
-    │        └── /api/assistant/get-chat-app-server-url
-    │                └── 返回 https://assistant.example.com
-    │
-    └──→ https://assistant.example.com/api/...  (VM 上的反向代理)
-                    │
-                    └── 443 → assistant-server:3001
-```
-
-### 配置
-
-```ini
-CHAT_APP_SERVER_URL=https://assistant.example.com
-# CHAT_APP_INTERNAL_URL 不设置
-```
-
-### 与本地直连模式的关键区别
-
-**1. 自签名证书问题消失**
-
-真实域名配备 CA 签名证书，浏览器可直接信任，无需任何中间 nginx 门面。
-
-**2. assistant-client 容器不再需要**
-
-当 StyleBI 以嵌入式 web component 方式集成时，assistant-client 的 SPA 角色由 StyleBI 承担。CA 签名证书消除了 nginx TLS 门面的需求。VM 上只需运行：
-
-- `assistant-server`（3001）
-- 反向代理（nginx/caddy，处理域名 + TLS）
-
-**3. VM 上必须有独立反向代理**
-
-assistant-server 本身监听 3001，需要 VM 上的 nginx/caddy 将域名流量转发：
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name assistant.example.com;
-    # CA 签名证书配置...
-
-    location / {
-        proxy_pass http://localhost:3001;
-    }
-}
-```
-
-**4. 必须配置 CORS**
-
-浏览器从 `https://stylebi.example.com` 向 `https://assistant.example.com` 发跨域请求，assistant-server 必须允许：
-
-```
-Access-Control-Allow-Origin: https://stylebi.example.com
-```
-
-本地 docker-compose 均为 `localhost`，无跨域问题。
-
-**5. StyleBI ECS 不转发任何流量**
-
-ECS 实例只负责返回配置 URL，之后流量完全是浏览器到 VM 的直连，ECS 不需要到 VM 的网络通路。
-
-**6. SSO/JWT 验证方向**
-
-assistant-server 需要验证 StyleBI 签发的 JWT，会请求：
-
-```
-VM 上的 assistant-server → https://stylebi.example.com/sso/jwks
-```
-
-需确保 VM 能访问 ECS 上 StyleBI 的公网地址（通常没问题，无 Docker 网络复杂性）。
-
----
-
-## 模式四：ECS + VM — Proxy 模式（可选）
-
-如果不想将 assistant-server 暴露公网，可在 ECS + VM 部署中启用 proxy 模式：
+如果不想将 `assistant-server` 直接暴露给浏览器，可在 ECS + VM 部署中启用 proxy 模式：
 
 ```
 [用户浏览器]
     │
     └──→ https://stylebi.example.com/api/assistant/proxy/**  (ECS)
                     │  ECS 内部转发（需 ECS → VM 网络通路）
-                    └──→ http://10.x.x.x:3001  (VM 内网 IP)
+                    └──→ https://3.234.216.165:3001  (VM/反代地址)
 ```
 
-### 配置
+#### 配置
+1. 构建时：`portal/.env` 里移除所有设置（不要在构建期写死 `localhost` 等地址）
 
-```ini
-CHAT_APP_INTERNAL_URL=http://10.x.x.x:3001   # VM 内网 IP（ECS 同 VPC）
-# CHAT_APP_SERVER_URL 可不设，或设为辅助用途
-CHAT_APP_SERVER_SSL_VERIFY=false              # 若 INTERNAL_URL 为 http 则无需关注
+2. proxy 的直连模式：`portal` 运行时环境变量增加如下内容：
+
+```yaml
+environment:
+  - CHAT_APP_SERVER_URL=https://3.234.216.165:3001
+  - STYLEBI_URL=https://inetsoft-btest.com
 ```
 
-### 要求
+3. `stylebi` server 需要配置增加属性：
 
-- ECS 安全组允许出站到 VM 的 3001 端口
+```properties
+  chat.app.internal.url=https://3.234.216.165:3001
+  chat.app.server.ssl.verify=false
+  chat.app.server.url=https://3.234.216.165:3001   //use for portal callback, SSO 验证会允许 https://3.234.216.165:3001/api/auth/callback 作为合法的回调地址
+```
+
+#### 要求
+
+- ECS 安全组允许出站到 VM 的 `3001,3002,3003`（HTTPS）端口
 - VM 安全组允许来自 ECS 的入站
 
-### 优势
+#### 优势
 
-- assistant-server 无需公网暴露，无需真实域名
+- assistant-server 无需公网暴露也能工作（关键是 `chat.app.server.ssl.verify=false`）
 - 浏览器无跨域问题
-- VM 上的反向代理和 CA 证书均不需要
+- VM 上仍可使用自签名证书（证书校验策略由 `ssl.verify=false` 放行）
 
+#### 现象
+1) `stylebi` 中 AI 正常访问
+2) `http://publicip:3002` 页面无法访问
+3) `https://publicip:3001` 手动授权之后，`portal` 正常访问
+
+**Note:**
+  - 如果将public ip指向一个域名,比如ai.inetsoft-btest.com
+
+### 直连模式
+
+当使用自签名证书时，直连模式无效。
+
+直连模式的前提条件：
+
+| 场景 | 能否用直连模式 |
+|---|---|
+| server 有 CA 签名的证书（如 Let's Encrypt） | ✓ 可以 |
+| localhost 本地开发测试 | ✓ 可以（浏览器允许 HTTP） |
+| 自签名证书 + 公网部署 | ✗ 不可以（`sso-complete.html` 的重定向仍会打到 `https://server:3001`，浏览器阻止） |
+
+---
+
+## 模式五：ECS + VM — CA 证书配置（用于直连）
+
+**步骤 1：下载并保存 AWS CA 证书**
+
+下载 AWS 的 CA 证书（例如 Amazon Root CA 1），保存到 `aws-certs/ca.crt`，供容器 / 服务端在需要时信任 AWS 端点。
+
+**步骤 2：在 EC2 上获取 Let's Encrypt 证书**
+
+```bash
+# 安装 certbot（Amazon Linux）
+sudo yum install -y certbot
+
+# 临时停止占用 80 端口的服务（独立模式获取证书）
+sudo certbot certonly --standalone -d ai.inetsoft-btest.com
+
+# 创建目标目录并复制证书
+cd /ai-assistant
+mkdir aws-certs
+sudo cp /etc/letsencrypt/live/ai.inetsoft-btest.com/fullchain.pem aws-certs/certificate.crt
+sudo cp /etc/letsencrypt/live/ai.inetsoft-btest.com/privkey.pem   aws-certs/private.key
+sudo chown $USER:$USER aws-certs/certificate.crt aws-certs/private.key
+```
+
+**步骤 3：配置 `assistant-server` 使用 CA 证书并启用直连**
+
+- 在 `docker-compose.yaml` 中挂载证书目录：
+
+```yaml
+volumes:
+  - ./.env:/app/.env:ro
+  - ./aws-certs:/app/certs:ro
+```
+
+- 在 StyleBI 的 `sree.properties` 里仅添加（开启直连模式）：
+
+```properties
+chat.app.server.url=https://ai.inetsoft-btest.com
+```
+
+此时采用**直连模式**理论上应该可通（使用浏览器信任的 CA 证书）；目前存在 Bug `#74432`：
+
+- 由于 portal 在构建镜像时仍使用自签名证书，因此直接访问 `http://ai.inetsoft-btest.com:3003/` 依旧会被浏览器视为不安全连接；
+- 如需彻底消除该问题，需要调整 portal 的构建配置，改用 CA 证书。
+
+---
+
+## 模式六：Google Cloud + VM — 自签名证书代理（不支持直连）
+
+在 Google Cloud + VM 的场景里，如果 `inetsoft-stylebi.cloud` 侧没有 CA 证书，则浏览器无法直接信任 VM 上的自签名 TLS（直连模式不可用）。
+因此需要沿用“TLS 门面/桥接”的思路：在本地/本模式中使用 `assistant-client(3002)` 作为对外入口，同时让 `stylebi` 通过 proxy 来完成到上游的通信。
+
+> 后续如果补齐 CA 证书，可以逐步切换为“可验证 TLS”的模式（例如开启 `chat.app.server.ssl.verify=true`）。
+
+### 配置注意
+
+1. `docker-compose` 的文件里必须配置 `client`：
+
+```yaml
+client:
+  image: 767398119392.dkr.ecr.ap-east-1.amazonaws.com/inetsoft/chat-app-client:1.0.0
+  container_name: chat-app-client
+  ports:
+    - "3002:3002"
+  restart: unless-stopped
+  depends_on:
+    - server
+```
+
+
+2. 构建 `portal` 镜像时，需要删除（移除这两行配置，不再在构建期写死本地地址）：
+
+```env
+VITE_CHAT_APP_SERVER_URL=https://localhost:3001
+VITE_STYLEBI_URL=http://localhost:8080
+```
+
+3. 在 `docker-compose` 的 `portal` 服务里，增加如下环境变量（让 portal 在运行时获得正确的公网地址）：
+
+```yaml
+environment:
+  - CHAT_APP_SERVER_URL=https://3.215.23.225:3001
+  - STYLEBI_URL=https://google.inetsoft-stylebi.cloud
+```
+
+4. 在`.env`中增加:
+```env
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+5. `stylebi` 的 server 需要配置（用于 proxy 模式与自签名证书信任）：
+
+```properties
+chat.app.internal.url=http://3.215.23.225:3002
+chat.app.server.ssl.verify=false
+```
+
+---
+
+## 其他模式：
+
+1. 当 StyleBI 使用源码方式运行、assistant 使用 Docker 部署时：
+
+- **Proxy 模式**：可通（已验证）
+  - `stylebi` 配置：
+
+```properties
+chat.app.internal.url=http://localhost:3002
+chat.app.server.ssl.verify=false
+```
+
+  - 现象：StyleBI 上点击 AI 按钮 → OK；但浏览器直接访问 `http://localhost:3002` 无法打开
+- **直连模式**：不通（需要进一步分析原因）
+
+2. 当 StyleBI 使用docker, assistant 使用源码部署时：
+
+3. 当stylebi 使用docker, assistant 使用docker部署时(这种方式不推荐):
+可以使用一个docker-compose, 如果要用两个,比如共享一个network
+
+**推荐**：尽量用**一个** `docker-compose.yaml` 启动全部服务（自动同网络、服务名可互相解析）。
+
+如果必须拆成**两个** compose（例如 stylebi 一套、assistant 一套），需要让两套 compose 共享同一个 Docker network：
+
+- **做法 A（推荐）**：创建一个外部网络，然后在两个 compose 里都声明 `external: true` 并引用同名网络。
+
+先创建网络：
+
+```bash
+docker network create inetsoft-net
+```
+
+`docker-compose.stylebi.yaml` 示例：
+
+```yaml
+services:
+  stylebi:
+    # ...
+    networks:
+      - inetsoft-net
+
+networks:
+  inetsoft-net:
+    external: true
+```
+
+`docker-compose.assistant.yaml` 示例：
+
+```yaml
+services:
+  client:
+    # ...
+    networks:
+      - inetsoft-net
+  server:
+    # ...
+    networks:
+      - inetsoft-net
+  portal:
+    # ...
+    networks:
+      - inetsoft-net
+
+networks:
+  inetsoft-net:
+    external: true
+```
+
+- **做法 B**：不手动创建网络，让其中一套 compose 先创建 network；另一套 compose 用 `external` 引用它（本质相同，但更容易因为 network 名称带前缀而踩坑）。
+
+- **Proxy 模式**：可通（已验证）
+  - `stylebi` 配置：
+
+```properties
+chat.app.internal.url=http://host.docker.internal:3002
+chat.app.server.ssl.verify=false
+```
+  - 现象：
+  1) StyleBI 上点击 AI 按钮 → OK；但浏览器直接访问 `http:///host.docker.internal:3002` 无法打开
+  2) `http://localhost:3003/` 授权失败
+
+- **直连 模式**:
+```portal
+environment:
+         - CHAT_APP_SERVER_URL=https://host.docker.internal:3001
+         - STYLEBI_URL=http://host.docker.internal:8080
+```
+  现象:
+  1) 上面的配置portal可以通,但是stylebi上ai 不能通
 ---
 
 ## 各模式对比总览
