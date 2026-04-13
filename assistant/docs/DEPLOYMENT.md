@@ -168,7 +168,7 @@ ECS + VM 部署中，如果 VM 上的 `assistant-server` 使用**自签名证书
 #### 配置
 1. 构建时：`portal/.env` 里移除所有设置（不要在构建期写死 `localhost` 等地址）
 
-2. proxy 的直连模式：`portal` 运行时环境变量增加如下内容：
+2. Proxy 模式下：`portal` 运行时环境变量增加如下内容：
 
 ```yaml
 environment:
@@ -202,6 +202,9 @@ environment:
 
 **Note:**
   - 如果将public ip指向一个域名,比如ai.inetsoft-btest.com
+  - `chat.app.internal.url` 可指向 `:3001`（server）或 `:3002`（client）；两者择一并保持全链路一致：
+    - 指向 `:3001`：StyleBI 直接代理到 server（常用于 VM 上已具备 HTTPS 入口）
+    - 指向 `:3002`：StyleBI 先到 client，再由 client 转发到 server（常用于沿用 nginx 门面）
 
 ---
 
@@ -209,7 +212,7 @@ environment:
 
 **步骤 1：下载并保存 AWS CA 证书**
 
-需要在 rout53 上增加一笔 A 记录，`ai.inetsoft-btest.com` 指向 EC2 的 public ip。
+需要在 Route 53 上增加一笔 A 记录，`ai.inetsoft-btest.com` 指向 EC2 的 public ip。
 
 下载 AWS 的 CA 证书（例如 Amazon Root CA 1），保存到 `aws-certs/ca.crt`，供容器 / 服务端在需要时信任 AWS 端点。
 每次使用新的 EC2，下面生成 CA 证书的命令都需要再做一次。
@@ -315,13 +318,13 @@ chat.app.server.ssl.verify=false
 
 | 组合 | Proxy 模式 | 直连模式 | 备注 / 猜测（用于追踪） |
 |---|---|---|---|
-| StyleBI 源码 + assistant Docker | **可通（已验证）** | **不通（待分析）** | Proxy 时 StyleBI 转发到 `chat.app.internal.url`（本机 `localhost:3002`）可达；直连失败多半与浏览器直面自签名 TLS / CORS / SSO 回调地址不一致有关（需抓浏览器控制台与 StyleBI server 日志确认） |
+| StyleBI 源码 + assistant Docker | **可通（已验证）** | **待验证（当前现象：不通）** | Proxy 时 StyleBI 转发到 `chat.app.internal.url`（本机 `localhost:3002`）可达；直连失败多半与浏览器直面自签名 TLS / CORS / SSO 回调地址不一致有关（需抓浏览器控制台与 StyleBI server 日志确认） |
 | StyleBI Docker + assistant 源码 | 待验证 | 待验证 | 常见风险：容器内访问宿主机需用 `host.docker.internal`（Windows/Mac）或额外网卡/bridge 配置（Linux），否则 `localhost` 指向容器自身 |
 | StyleBI Docker + assistant Docker（拆成两套 compose） | **可通（已验证）** | **部分可通（现象：portal 通、StyleBI 不通）** | Proxy 关键是两套 compose 必须共享同一个 network，且 `chat.app.internal.url` 使用容器可解析的地址；直连如果让 portal 指向 `https://host.docker.internal:3001`，浏览器/StyleBI 两侧地址口径可能不一致导致 StyleBI AI 不通 |
 
 ---
 
-## 其他模式 / 备注
+## 其他模式 / 备注（仅保留操作步骤）
 
 当 StyleBI 使用 docker、assistant 使用 docker 部署时（这种方式不推荐），可以用一个 `docker-compose.yaml`；如果必须拆成两个 compose，需要共享一个 network（见下节）。
 
@@ -375,25 +378,24 @@ networks:
 
 - **做法 B**：不手动创建网络，让其中一套 compose 先创建 network；另一套 compose 用 `external` 引用它（本质相同，但更容易因为 network 名称带前缀而踩坑）。
 
-- **Proxy 模式**：可通（已验证）
-  - `stylebi` 配置：
+- `stylebi` 配置示例（Proxy）：
 
 ```properties
 chat.app.internal.url=http://host.docker.internal:3002
 chat.app.server.ssl.verify=false
 ```
   - 现象：
-  1) StyleBI 上点击 AI 按钮 → OK；但浏览器直接访问 `http:///host.docker.internal:3002` 无法打开
+  1) StyleBI 上点击 AI 按钮 → OK；但浏览器直接访问 `http://host.docker.internal:3002` 无法打开
   2) `http://localhost:3003/` 授权失败
 
-- **直连 模式**:
+- 直连模式示例：
 ```portal
 environment:
          - CHAT_APP_SERVER_URL=https://host.docker.internal:3001
          - STYLEBI_URL=http://host.docker.internal:8080
 ```
-  现象:
-  1) 上面的配置portal可以通,但是stylebi上ai 不能通
+  现象示例：
+  1) 上面的配置 portal 可以通, 但是 stylebi 上 AI 不能通
 ---
 
 ## 各模式对比总览
