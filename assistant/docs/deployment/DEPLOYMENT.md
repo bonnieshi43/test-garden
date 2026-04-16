@@ -162,7 +162,7 @@ ECS + VM 部署中，如果 VM 上的 `assistant-server` 使用**自签名证书
     │
     └──→ https://stylebi.example.com/api/assistant/proxy/**  (ECS)
                     │  ECS 内部转发（需 ECS → VM 网络通路）
-                    └──→ https://3.234.216.165:3001  (VM/反代地址)
+                    └──→ http://3.234.216.165:3002  (VM/反代地址)
 ```
 
 #### 配置
@@ -179,9 +179,14 @@ environment:
 3. `stylebi` server 需要配置增加属性：
 
 ```properties
-  chat.app.internal.url=https://3.234.216.165:3001
+  chat.app.internal.url=http://3.234.216.165:3002  //指向assistant client
   chat.app.server.ssl.verify=false
   chat.app.server.url=https://3.234.216.165:3001   //use for portal callback, SSO 验证会允许 https://3.234.216.165:3001/api/auth/callback 作为合法的回调地址
+```
+
+4. 在`.env`中增加:
+```env
+NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
 
 #### 要求
@@ -251,6 +256,22 @@ chat.app.server.url=https://ai.inetsoft-btest.com
 ```
 
 此时采用**直连模式**是可通（使用浏览器信任的 CA 证书）；相关问题追踪：Bug `#74432`（已修复，保留编号便于追踪）
+
+### 已知限制：Cookie 共享在跨域直连下可能导致 401
+
+assistant 使用 Cookie 共享方式时，在跨域请求场景下可能出现授权失败，典型报错为：
+
+```text
+401 Unauthorized
+Authentication failed: invalid or expired token
+```
+
+例如：
+
+- 前端：`https://google.inetsoft-stylebi.cloud`
+- API：`https://ai.inetsoft-btest.com:3001`
+
+上述前后端不同域名/源的组合，属于高风险配置。此时更建议使用 Proxy 模式（统一通过 StyleBI 域转发）以避免跨域 Cookie/认证问题。
 
 - 由于 portal 在构建镜像时仍使用自签名证书，因此直接访问 `http://ai.inetsoft-btest.com:3003/` 依旧会被浏览器视为不安全连接；
 - 如需彻底消除该问题，需要调整 portal 的构建配置，改用 CA 证书。
