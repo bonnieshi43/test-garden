@@ -1,0 +1,34 @@
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = req_ext
+
+[dn]
+C = CN
+ST = Beijing
+L = Beijing
+O = inetsoft
+OU = AI-Assistant
+CN = localhost
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+# 本地开发
+DNS.1 = localhost
+DNS.2 = host.docker.internal
+DNS.3 = host.containers.internal
+
+# 内网 IP
+IP.1 = 127.0.0.1
+IP.2 = 192.168.2.154
+IP.3 = 172.17.0.1
+
+# 域名
+DNS.4 = ai.inetsoft-stylebi.cloud
+DNS.5 = *.ai.inetsoft-stylebi.cloud
+DNS.6 = ai.inetsoft-btest.com
+DNS.7 = *.ai.inetsoft-btest.com
