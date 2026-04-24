@@ -8,9 +8,26 @@
 
 | 阶段 | 说明 | 状态 |
 |------|------|------|
-| **1. 纯 Java 单元测试** | 后端 / 共享 Java 模块的单测与约定 | **待建设（TODO）** |
+| **1. 纯 Java 单元测试** | 后端 / 共享 Java 模块的单测与约定；**用例生成提示词**见 `java-unit/prompts/` | **提示词已就绪**；工程目录、构建与 CI 接入仍待对齐 |
 | **2. 前端 Unit Case 集成测试** | 以前端组件为主的**集成向**单测，见 `front-end-testing/` | **进行中** |
 | **3. E2E 测试** | 端到端（浏览器 / 真实链路）自动化 | **待建设（TODO）** |
+
+---
+
+## 阶段 1：纯 Java 单元测试（提示词）
+
+### 定位
+
+- **`java-unit/`** 存放 **Java 端 unit case 的生成提示词**（prompt），用于指导从被测类分析到 JUnit 用例结构、命名与注释约定，与前端 `front-end-testing/prompts/` 并列，按技术栈区分。
+- 提示词侧重：**意图 vs 实现**、按类类型选策略（数据模型 / 行为编排 / 存储适配器等）、决策树与场景覆盖；**测试代码与注释使用英文**（见该提示词文首说明）。
+
+### 提示词（`java-unit/prompts/`）
+
+| 文件 | 作用 |
+|------|------|
+| `java-unit-test-generation-prompt.md` | **主提示词**：类类型判断 → 决策树 / 业务场景 / 存储契约等策略 → 与 suspect、路径注释配套的 JUnit 写法约定。 |
+
+工程侧若在具体仓库中约定 Surefire、目录布局或 CI 命令，可在本 README「测试阶段」表与本节补充链接；当前以提示词文档为准驱动人工或 AI 生成用例。
 
 ---
 
@@ -59,6 +76,9 @@
 ```
 auto-test/
 ├── README.md                 # 本说明
+├── java-unit/
+│   └── prompts/              # Java 端 unit case 生成提示词
+│       └── java-unit-test-generation-prompt.md
 └── front-end-testing/
     └── prompts/              # 前端集成测试 / Service 单测 的提示词与补充材料
         ├── Front end testing scenario-v5.md
@@ -67,13 +87,13 @@ auto-test/
         └── service-unit-test-generation-prompt.md
 ```
 
-后续若补充 **Java 单测** 或 **E2E** 的脚本、配置与文档，建议在本 README 的「测试阶段」表中更新链接与状态。
+后续若补充 **Java 单测** 的工程脚本、Surefire 配置与 **E2E** 的脚本、配置与文档，建议在本 README 的「测试阶段」表与「阶段 1」小节中更新链接与状态。
 
 ---
 
 ## 后续规划（TODO 摘要）
 
-1. **纯 Java 单元测试**：目录、构建约定、CI 接入方式待定义。  
+1. **纯 Java 单元测试**：`java-unit/prompts/` 已提供生成提示词；具体工程中的源码/测试目录、构建约定与 CI 接入方式待与业务仓库对齐。  
 2. **E2E**：选型（如 Playwright / Cypress 等）、环境与流水线待定义。  
 3. **前端 `*.tl.spec.ts`**：将 `npm run tl` 纳入构建前或 PR 门禁（当前未接入）。  
 4. 本 README 随 `auto-test/` 实际内容迭代更新。
