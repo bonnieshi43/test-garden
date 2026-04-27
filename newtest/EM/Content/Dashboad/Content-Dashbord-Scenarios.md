@@ -7,6 +7,74 @@ last-updated: 2026-04-27
 > P3 scenarios are excluded. Items marked _(inferred)_ are expanded from context.
 > Items marked [NEEDS CLARIFICATION] require manual review.
 
+## Feature Summary
+
+### 功能简述
+Content-Dashboard covers Global Dashboards managed from EM and User Dashboards created
+from the Portal Dashboard tab. The core business objects are dashboard repository
+resources, their bound viewsheet/dashboard assets, visibility state, ordering, owner
+metadata, and access permissions. The primary users are Site Admins, Org Admins,
+authorized EM users, and Portal users who consume or manage their own dashboards.
+
+### 规则与注意点
+
+#### 通用规则
+- Global Dashboards are created and edited in EM, persisted as repository resources,
+  and displayed read-only in Portal when their saved Enable/security state allows it.
+- User Dashboards are created from Portal, stored under the owning user's dashboard
+  scope, and remain editable through the supported EM and Portal management surfaces.
+- Dashboard name, description, bound asset, order, Enable state, and delete results must
+  persist after reload and synchronize across the relevant EM and Portal views.
+
+#### 权限与可见性
+- With `security=true`, Global Dashboard Portal visibility requires both dashboard
+  resource ACCESS and Dashboard access permission.
+- EM repository visibility depends on ADMIN access to the relevant dashboard repository
+  path and dashboard resource.
+- A permitted non-admin creator receives access to the Global Dashboard they create;
+  other users require explicit grants.
+- Global Dashboards remain read-only in Portal; Portal users must not mutate their
+  metadata, binding, order, or resource state.
+
+#### 多租户与资源归属
+- Site Admin creation through Org filter must assign dashboard resource ownership and
+  access ownership to the target org, not Host-Org.
+- Org Admin and permitted internal user creation uses the currently logged-in tenant
+  user as owner.
+- Clone Org clones dashboard resources but not per-user Enable state; cloned-org Enable
+  state is managed independently and must sync with Site Admin's Org filter view.
+- User Dashboard storage and edits are tenant-scoped and must not leak across orgs.
+
+#### 特殊情况 / 已知风险
+- Bug #69387 covers wrong owner/access assignment after Site Admin switches org with Org
+  filter.
+- Bug #69347 covers cloned org user Enable state behavior and depends on Bug #69387.
+- Bug #69468 covers private asset binding visibility, including cross-org User
+  Dashboard cases.
+- Security mode switching is low priority; cover only basic visibility behavior.
+- Missing bound assets should fail clearly with `sheet not found` without corrupting
+  other dashboard state.
+
+#### 生成取舍
+- User/role/group and ADMIN/ACCESS matrix combinations are represented by grant/deny or
+  owner-focused cases; exhaustive permission matrix coverage is deferred to Security.
+- UI-only checks such as dialog open, button enabled state, scrollbars, default
+  selection, and generic toolbar "work correctly" behavior are excluded as P3.
+- Toolbar actions are not generated here unless they create or mutate dashboard-owned
+  business state; concrete outcomes belong to related modules such as Scheduler, Mail,
+  Export, or Composer.
+
+## Scenario Overview
+
+| ID(s) | Priority | Area | Scenario | Key Business Assertion |
+|-------|----------|------|----------|------------------------|
+| CD-CRUD-001 - CD-CRUD-006 | P1/P2 | CRUD | Dashboard lifecycle persistence and synchronization | Create, edit, arrange, delete, and validation flows preserve correct repository, Portal, binding, order, and identity state. |
+| CD-PERM-001 - CD-PERM-005 | P1/P2 | Permissions | Dashboard permission and visibility integration | ACCESS/ADMIN permissions, creator grants, read-only Portal behavior, and binding authorization control what users can see or persist. |
+| CD-MT-001 - CD-MT-005 | P1/P2 | Multitenant | Tenant ownership, clone behavior, and cross-surface sync | Dashboard resources, owners, Enable state, and User Dashboard edits remain scoped to the selected org and synchronized across tenant views. |
+| CD-EDGE-001 | P2 | Edge Cases | Private asset binding restriction | Users cannot expose or persist another user's private dashboard asset through User Dashboard binding, including cross-org cases. |
+| CD-EDGE-002 - CD-EDGE-003 | P2 | Edge Cases | Security mode switch visibility behavior | Basic visibility follows explicit ACCESS after enabling security and EM-side Enable after disabling security. |
+| CD-EDGE-004 | P2 | Edge Cases | Missing bound asset handling | Broken bindings fail clearly with `sheet not found` and do not corrupt unrelated dashboard state. |
+
 ## CRUD - Persistence And Synchronization
 
 #### CD-CRUD-001 Create Global Dashboard Persists Resource State `P1`
@@ -21,9 +89,8 @@ Admin, or a user with the required EM and Portal Dashboard Tab permissions.
 **Steps:**
 1. Create a Global Dashboard in EM with a unique name and a valid bound dashboard.
 2. Reload EM and verify the dashboard resource still exists with the same binding.
-3. Navigate to Portal.
-4. **Sync check:** Verify the dashboard can be opened from Portal when it is enabled and
-   allowed by the current security mode.
+3. **Sync check:** As an allowed Portal user, open the dashboard and verify the saved
+   binding and availability state.
 
 **Expected:**
 - The dashboard resource is persisted under the Global Dashboard repository path.
@@ -43,9 +110,8 @@ dashboard asset is available for binding.
 **Steps:**
 1. Create a User Dashboard from Portal with a unique name and a valid bound dashboard.
 2. Reload Portal and verify the dashboard still opens the selected asset.
-3. Open EM as an authorized administrator.
-4. **Sync check:** Verify the same User Dashboard exists under the user's dashboard
-   repository scope.
+3. **Sync check:** As an authorized EM administrator, verify the same User Dashboard
+   exists under the user's dashboard repository scope.
 
 **Expected:**
 - The User Dashboard is persisted for the owning user.
@@ -126,11 +192,10 @@ Dashboard access permission enabled to see a Global Dashboard.
 is available for grant and deny checks.
 
 **Steps:**
-1. Ensure the representative user has no access to the Global Dashboard.
-2. Log in as that user and check Portal Dashboard availability.
-3. Grant ACCESS for the same user to the Global Dashboard.
-4. Log in again as that user.
-5. **Sync check:** Verify Portal availability follows the saved permission state.
+1. With ACCESS denied, verify the representative user cannot see or open the Global
+   Dashboard in Portal.
+2. Grant ACCESS for the same user to the Global Dashboard.
+3. **Sync check:** Verify the same user can see and open the dashboard in Portal.
 
 **Expected:**
 - Without ACCESS, the user cannot see or open the Global Dashboard in Portal.
@@ -162,10 +227,9 @@ access permission on the Global Dashboard they create.
 permissions.
 
 **Steps:**
-1. Log in as the permitted non-admin user.
-2. Create a Global Dashboard from EM.
-3. Inspect the saved access state for the new dashboard.
-4. Open Portal as the same user.
+1. As the permitted non-admin user, create a Global Dashboard from EM.
+2. Verify the saved access state grants the creator access to the new dashboard.
+3. **Sync check:** Verify the same user can open the created dashboard in Portal.
 
 **Expected:**
 - Dashboard creation succeeds.
@@ -180,10 +244,9 @@ permissions.
 **Pre-conditions:** A Global Dashboard is visible to a Portal user.
 
 **Steps:**
-1. Open the Global Dashboard in Portal.
-2. Attempt any supported edit or delete path for the Global Dashboard, including direct
+1. Attempt any supported Portal edit or delete path for the Global Dashboard, including direct
    action invocation if available _(inferred)_.
-3. Reload EM and Portal.
+2. Reload EM and Portal to verify the dashboard resource state is unchanged.
 
 **Expected:**
 - Portal cannot modify or delete the Global Dashboard.
@@ -217,12 +280,10 @@ Host-Org.
 The target org has an Org Admin and at least one dashboard asset for binding.
 
 **Steps:**
-1. Log in as Site Admin.
-2. Switch Org filter from Host-Org to the target org.
-3. Create a Global Dashboard.
-4. Inspect the dashboard resource owner and access permission owner.
-5. Log in as target Org Admin.
-6. **Sync check:** Verify the target Org Admin can manage the created dashboard.
+1. As Site Admin with Org filter set to the target org, create a Global Dashboard.
+2. Verify the dashboard resource owner and access permission owner belong to the target
+   org context.
+3. **Sync check:** As target Org Admin, verify the created dashboard is manageable.
 
 **Expected:**
 - Resource ownership is assigned to the target org context.
@@ -256,11 +317,10 @@ sync with Site Admin's Org filter view.
 
 **Steps:**
 1. Clone the source org.
-2. Log in as the cloned org's Org Admin.
-3. Verify dashboard resources exist in the cloned org.
-4. Configure dashboard Enable state in the cloned org.
-5. Log in as Site Admin and switch Org filter to the cloned org.
-6. **Sync check:** Verify Site Admin sees the same cloned-org Enable state.
+2. As the cloned org's Org Admin, verify dashboard resources exist and configure their
+   Enable state.
+3. **Sync check:** As Site Admin with Org filter set to the cloned org, verify the same
+   cloned-org Enable state.
 
 **Expected:**
 - Dashboard resources are cloned.
@@ -279,11 +339,10 @@ Site Admin, Org Admin, and the user can access their respective views.
 
 **Steps:**
 1. Create or edit a User Dashboard as the tenant user in Portal.
-2. **Sync check:** Verify the User Dashboard appears in the same tenant scope in Org
-   Admin EM.
-3. Open Site Admin EM with Org filter set to the tenant org.
-4. **Sync check:** Verify the same name, description, binding, and order are shown.
-5. Repeat an edit from Org Admin EM or Site Admin EM and verify Portal reflects it.
+2. **Sync check:** Verify the same name, description, binding, and order in Org Admin
+   EM and Site Admin EM with Org filter set to the tenant org.
+3. Edit the User Dashboard from an EM management surface and verify Portal reflects the
+   change.
 
 **Expected:**
 - User Dashboard storage is scoped to the owning org.
@@ -299,11 +358,9 @@ Dashboards when binding global-scope assets.
 **Pre-conditions:** Target org has a User Dashboard and an eligible global-scope asset.
 
 **Steps:**
-1. Log in as Site Admin.
-2. Switch Org filter to the target org.
-3. Edit the target user's User Dashboard binding to a global-scope asset.
-4. Open Portal as the target user.
-5. **Sync check:** Verify the User Dashboard opens the new binding.
+1. As Site Admin with Org filter set to the target org, edit the target user's User
+   Dashboard binding to a global-scope asset.
+2. **Sync check:** As the target user, verify the User Dashboard opens the new binding.
 
 **Expected:**
 - Site Admin can update the target org User Dashboard through Org filter.
@@ -322,7 +379,7 @@ bound dashboard instead of exposing a private asset.
 to it. Another authorized EM actor can open the user's dashboard resource.
 
 **Steps:**
-1. Log in as the owner and bind the User Dashboard to the owner's private dashboard.
+1. As the owner, bind the User Dashboard to the owner's private dashboard.
 2. Open the same User Dashboard edit binding from another authorized EM actor.
 3. Repeat in the cross-org case where applicable.
 
@@ -341,10 +398,10 @@ explicit permission grants.
 
 **Steps:**
 1. Switch `security` to `true`.
-2. Log in as a representative regular user.
-3. Check the user's Portal Dashboard availability.
-4. Grant ACCESS to one dashboard.
-5. Log in again as the same user.
+2. As a representative regular user, verify dashboards are not visible by default and
+   the saved permission state denies access.
+3. Grant ACCESS to one dashboard and verify the same user sees only the granted
+   dashboard.
 
 **Expected:**
 - The user no longer sees dashboards by default after switching to `security=true`.
@@ -361,12 +418,12 @@ availability, and Portal Arrange Enable remains portal-scoped.
 granted.
 
 **Steps:**
-1. Switch `security` to `false`.
-2. Verify dashboards with EM-side `Enable=true` are available in Portal.
-3. Disable one dashboard from Portal Arrange.
-4. Verify EM-side `Enable` remains unchanged.
-5. Disable one dashboard from EM-side `Enable`.
-6. **Sync check:** Verify that dashboard is no longer available in Portal or EM Arrange.
+1. Switch `security` to `false` and verify dashboards with EM-side `Enable=true` are
+   available in Portal.
+2. Disable one dashboard from Portal Arrange and verify EM-side `Enable` remains
+   unchanged.
+3. Disable one dashboard from EM-side `Enable`.
+4. **Sync check:** Verify that dashboard is no longer available in Portal or EM Arrange.
 
 **Expected:**
 - Portal availability follows EM-side `Enable` after switching to `security=false`.

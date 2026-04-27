@@ -78,6 +78,14 @@
 | 多个场景共享同一 Pre-conditions，仅条件/结果不同 | **表格格式** |
 | 场景有独特前提条件、或步骤需要跨页面/跨角色操作 | **独立场景格式** |
 
+### Steps 生成原则
+
+- Steps 只用于操作顺序会影响业务结果的场景，例如跨端同步、跨角色、跨 org、权限状态切换、创建后验证、删除后清理、Bug 复现等。
+- Steps 应保持精简，通常 3-6 步；除非业务流程确实复杂，不超过 8 步。
+- 不展开通用登录、导航、打开菜单、点击按钮、弹窗打开等机械 UI 动作，除非这些动作会影响权限、org、角色或持久化状态。
+- 每一步都应推动业务状态变化或验证关键状态；不能只是描述 UI 操作。
+- 如果多个场景共享前置条件且差异只在输入条件/预期结果，应使用表格格式，不写重复 Steps。
+
 ### 表格格式（同类场景批量表达）
 
 ```markdown
@@ -127,6 +135,35 @@
 - 可从上下文合理推断 → 补全，加 `_(inferred)_`
 - 无法推断 → 填写 `[NEEDS CLARIFICATION]`，保留占位
 
+### 文档开头信息
+
+每个生成的场景 MD 在正文最前面必须先包含两个固定模块：
+
+1. `## Feature Summary`
+   - `### 功能简述`：用 2-4 句话说明该功能/模块解决什么问题、主要用户是谁、核心业务对象是什么。
+   - `### 规则与注意点`：按固定分组汇总本文件涉及的规则、风险和生成取舍。
+   - 规则与注意点必须优先来自 Overview / Rules 文档；只写与当前输出文件场景直接相关的内容，不复制无关规则全文。
+   - 使用以下分组；如果某个分组无适用内容，可以省略该分组：
+     - `#### 通用规则`：正常业务路径下必须成立的规则，例如创建、编辑、删除、绑定、排序、持久化、同步等。
+     - `#### 权限与可见性`：security=true/false、ACCESS/ADMIN、只读、授权对象、入口可见性等。
+     - `#### 多租户与资源归属`：Org filter、owner、tenant isolation、Clone Org、跨 org 访问等。
+     - `#### 特殊情况 / 已知风险`：Bug、private asset、security switch、missing asset、边界约束等。
+     - `#### 生成取舍`：被合并、降级、丢弃或转移到 Related Module Tests 的场景类型。
+2. `## Scenario Overview`
+   - 用 5 列轻量表格作为后续详细 scenario 的导航和覆盖摘要。
+   - 一行可以对应一个详细场景，也可以汇总多个后续详细场景；汇总时 `ID(s)` 必须列出明确 ID 或连续范围，例如 `S-001 - S-004`、`S-001, S-003`。
+   - `ID(s)` 中出现的每个 ID 必须能在下方详细场景标题中找到。
+   - Overview 只做导航和摘要，不写前提条件、完整规则、步骤或完整预期结果。
+
+`Scenario Overview` 表格格式：
+
+```markdown
+| ID(s) | Priority | Area | Scenario | Key Business Assertion |
+|-------|----------|------|----------|------------------------|
+| S-001 | P1 | CRUD | [场景摘要] | [关键业务断言] |
+| S-002 - S-004 | P1/P2 | Permissions | [多个相关场景摘要] | [这些场景共同覆盖的业务断言] |
+```
+
 ---
 
 ## 五、规则覆盖检查
@@ -165,6 +202,35 @@ last-updated: YYYY-MM-DD
 
 > P3 scenarios are excluded. Items marked _(inferred)_ are expanded from context.
 > Items marked [NEEDS CLARIFICATION] require manual review.
+
+## Feature Summary
+
+### 功能简述
+[用 2-4 句话说明该功能/模块解决什么问题、主要用户是谁、核心业务对象是什么]
+
+### 规则与注意点
+
+#### 通用规则
+- [正常业务路径下必须成立的规则，例如创建、编辑、删除、绑定、排序、持久化、同步等]
+
+#### 权限与可见性
+- [security=true/false、ACCESS/ADMIN、只读、授权对象、入口可见性等规则]
+
+#### 多租户与资源归属
+- [Org filter、owner、tenant isolation、Clone Org、跨 org 访问等规则]
+
+#### 特殊情况 / 已知风险
+- [Bug、private asset、security switch、missing asset、边界约束等]
+
+#### 生成取舍
+- [被合并、降级、丢弃或转移到 Related Module Tests 的场景类型]
+
+## Scenario Overview
+
+| ID(s) | Priority | Area | Scenario | Key Business Assertion |
+|-------|----------|------|----------|------------------------|
+| S-001 | P1 | CRUD | [单个场景摘要] | [关键业务断言] |
+| S-002 - S-004 | P1/P2 | Permissions | [多个相关场景摘要] | [这些场景共同覆盖的业务断言] |
 
 ## [分组标题]
 
