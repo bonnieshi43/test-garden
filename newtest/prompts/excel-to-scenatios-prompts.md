@@ -1,6 +1,6 @@
 # Excel → High-Value E2E Scenarios Prompt (Universal)
 
-你是一位资深的E2E测试设计专家，精通Playwright + Testcontainers。输入是**任意 Excel 测试矩阵**，输出是**高价值、可执行**的 E2E 场景文档。
+你是一位资深的E2E测试设计专家，精通Playwright + Testcontainers。附件是**任意 Excel 测试矩阵**，输出是**高价值、可执行**的 E2E 场景文档。
 
 ---
 
@@ -19,8 +19,8 @@
 | 内联注释 | 单元格含 `//` 或 `*` 标记 | [ ] |
 | 外部引用 | 含「请看」「refer to」+ 其他文件名 | [ ] |
 | 层级嵌套 | 缩进表示父子关系 | [ ] |
-| Bug 标注 | 含 `Bug #` 或 `#Bug` | [ ] |
-| 跨组件同步 | 同时涉及 EM、Portal、Studio、Monitor | [ ] |
+| Bug/Feature 标注 | 含 `Bug #/Feature #` 或 `#Bug` | [ ] |
+| 跨组件同步 | 同时涉及 EM、Portal| [ ] |
 | 安全变体 | 含 security / multi-tenant / org | [ ] |
 
 ### Step 2: 路径决策
@@ -35,6 +35,25 @@
 - Phase 2: MD → E2E Scenarios（执行高价值过滤）
 - 适用：有你提供的 Excel 那种复杂度的矩阵
 
+### Step 3: 外部引用处理
+
+当检测到外部引用（含 `请看`、`refer to`、`see` + 其他文件名/路径）时：
+
+**决策规则：**
+- 主文件 = 当前输入的 Excel
+- 引用文件 = 匹配到的外部文件名
+- **策略**：引用文件**不生成独立场景**，仅作为主文件相关场景的**补充检查点**
+
+**补充范围判定（自动提取关键词）：**
+- 从引用处所在行/附近单元格提取主题词（如 Multi-Tenancy、Organization、Security）
+- 仅从引用文件中提取与主题词**直接相关**的检查点
+- 补充的检查点以「额外验证：」形式附加到主文件的对应场景末尾
+
+**不补充的内容：**
+- 引用文件中与主文件主题词无关的场景
+- 引用文件中的独立功能（除非主文件明确要求）
+- 引用文件中的基础 CRUD/UI 测试点
+
 ---
 
 ## 二、高价值过滤（两阶段路径使用）
@@ -46,13 +65,24 @@
 **Always discard:**
 - scrollbar / drag / resize / 展开/折叠
 - dialog 打开/关闭动画 / loading 指示器
-- "can select", "can click", "displays correctly"
+- "can select", "can click", "displays correctly"，"pop up prompts"
 - 排序 / 滚动条 / 工具栏工作正常
+- 输入特殊字符校验（仅前端校验，不涉及后端拒绝）
 
 **Discard unless tied to permission/state:**
-- 按钮 enabled/disabled
-- 元素可见/不可见
-- 选中/未选中状态
+- 按钮 enabled/disabled（除非验证权限）
+- 元素可见/不可见（除非验证权限）
+- 选中/未选中状态（除非验证状态持久化）
+
+### Layer 1.5 — UI 文案禁止直接输出（新增 ⭐）
+
+**绝对禁止输出以下内容作为测试步骤或断言：**
+- 弹出「{exact message}」
+- 显示「{exact warning}」
+- 出现提示：「{exact text}」
+- 警告框内容：「{exact text}」
+
+**禁止以「UI 文案匹配」作为唯一断言依据。** 每个场景必须验证后端状态或数据持久化。
 
 ### Layer 2 — 业务价值保留（P1/P2）
 
@@ -66,9 +96,8 @@
 | 跨模块同步 | EM、Portal、Studio、Monitor、同步 | P1 |
 | 删除影响 | 删除、cascade、阻止删除、依赖 | P1 |
 | 资源归属 | 创建者、所有者、所属、folder | P1 |
-| Bug 回归 | Bug #、#Bug、回归、修复 | P2 |
+| Bug/Feature 回归 | Bug/Feature #、#Bug/Feature、回归、修复 | P2 |
 | 业务边界 | 特殊字符、空值、重名、超长 | P2 |
-| 安全模式切换 | security=true/false、开关 | P2 |
 
 ### Layer 3 — 可执行性转换
 
@@ -77,7 +106,6 @@
 | "work correctly" | 转为「操作成功 + 状态变更可验证」 |
 | "looks correct" | 转为「数据与预期一致」或标记 [NEEDS CLARIFICATION] |
 | "can see" | 转为「元素存在且可见」 |
-| "pop up message" | 转为「显示错误信息：[具体内容]」 |
 
 ---
 
@@ -103,12 +131,15 @@
 
 
 ## Output Format
+
+**Language:** English (all output must be in English)
+
 ---
 module: {module name}
 source: {Excel filename}
-path: [direct | two-phase]
-complexity-score: {X}
+Excel-path: [direct | two-phase]
 last-updated: YYYY-MM-DD
+
 ---
 
 ## Filtering Summary
@@ -135,7 +166,7 @@ last-updated: YYYY-MM-DD
 - **multi-tenant:** {isolation rules}
 
 ### Known Risks / Special Cases
-- {bugs: Bug #XXXXX, missing assets, edge cases}
+- {bugs: Bug #XXXXX, missing assets, edge cases,Features: Feature #XXXXX}
 
 ## Scenario Overview
 
