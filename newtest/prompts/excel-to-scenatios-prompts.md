@@ -1,6 +1,6 @@
 # Excel → High-Value E2E Scenarios Prompt (Universal)
 
-你是一位资深的E2E测试设计专家，精通Playwright + Testcontainers。附件是**任意 Excel 测试矩阵**，输出是**高价值、可执行**的 E2E 场景文档。
+从碎片化、表格化的 Excel 测试点中，**重构**出高价值、可执行、低冗余的 E2E 场景，并确保每条业务规则都有 P1/P2 场景覆盖。
 
 ---
 
@@ -14,28 +14,13 @@
 
 | 特征 | 检测规则 | Yes/No |
 |------|---------|--------|
-| 多 Sheet | sheet 数量 > 1 | [ ] |
-| 合并单元格 | 存在跨行/跨列合并 | [ ] |
-| 内联注释 | 单元格含 `//` 或 `*` 标记 | [ ] |
 | 外部引用 | 含「请看」「refer to」+ 其他文件名 | [ ] |
 | 层级嵌套 | 缩进表示父子关系 | [ ] |
 | Bug/Feature 标注 | 含 `Bug #/Feature #` 或 `#Bug` | [ ] |
 | 跨组件同步 | 同时涉及 EM、Portal| [ ] |
 | 安全变体 | 含 security / multi-tenant / org | [ ] |
 
-### Step 2: 路径决策
-
-**Direct 路径**（简单 Excel）：
-- 输入：Excel
-- 输出：E2E Scenarios
-- 适用：单 sheet、无合并单元格、无外部引用、结构规范
-
-**Two-Phase 路径**（复杂 Excel）：
-- Phase 1: Excel → 忠实翻译 MD（保留所有信息，不做过滤）
-- Phase 2: MD → E2E Scenarios（执行高价值过滤）
-- 适用：有你提供的 Excel 那种复杂度的矩阵
-
-### Step 3: 外部引用处理
+### Step 2: 外部引用处理
 
 当检测到外部引用（含 `请看`、`refer to`、`see` + 其他文件名/路径）时：
 
@@ -44,11 +29,6 @@
 - 引用文件 = 匹配到的外部文件名
 - **策略**：引用文件**不生成独立场景**，仅作为主文件相关场景的**补充检查点**
 
-**补充范围判定（自动提取关键词）：**
-- 从引用处所在行/附近单元格提取主题词（如 Multi-Tenancy、Organization、Security）
-- 仅从引用文件中提取与主题词**直接相关**的检查点
-- 补充的检查点以「额外验证：」形式附加到主文件的对应场景末尾
-
 **不补充的内容：**
 - 引用文件中与主文件主题词无关的场景
 - 引用文件中的独立功能（除非主文件明确要求）
@@ -56,9 +36,55 @@
 
 ---
 
-## 二、高价值过滤（两阶段路径使用）
+## 二、场景类型识别与优先级
 
-这是融合的核心——无论哪条路径，最终都执行同样的过滤逻辑。
+### Step 1: 场景类型判定
+
+从 Excel 测试点识别场景类型，决定处理策略：
+
+| 类型 | 特征 | 处理 | 默认优先级 |
+|------|------|------|------------|
+| **CRUD + 关联** | 创建/修改/删除 + 影响其他模块 | 保留，合并为业务叙事 | P1 |
+| **权限控制** | 角色、权限、grant、deny、admin | 保留 | P1 |
+| **多租户隔离** | 组织、tenant、跨组织、security | 保留 | P1 |
+| **跨模块同步** | EM、Portal、Studio、Monitor 间数据一致 | 保留 | P1 |
+| **状态持久化** | 刷新后、重新登录后、保存后仍生效 | 保留 | P1 |
+| **删除级联** | 删除、cascade、阻止删除、依赖检查 | 保留 | P1 |
+| **Bug 修复** | Bug #XXXXX | 融入主线场景 | - |
+| **功能增强** | Feature #XXXXX | 融入主线场景 | - |
+| **业务边界** | 特殊字符、空值、重名、超长（后端拒绝） | **丢弃** | - |
+| **纯 UI** | 滚动条、拖拽、排序、悬浮效果、对话框动画 | **丢弃** | - |
+| **纯前端校验** | 密码长度、邮箱格式（仅前端提示） | **丢弃** | - |
+
+### Step 2: Bug/Feature 融入规则
+
+当检测到 Bug/Feature 标注（`Bug #`、`Feature #`、`#Bug`、`#Feature`）时：
+
+**融入策略：**
+1. 判断该 Bug/Feature 是否属于**主线业务流程**
+2. 若属于 → 融入相关主线场景，在步骤或断言后标注 `(fixes Bug #XXXXX)` 或 `(implements Feature #XXXXX)`
+3. 若不属于（独立边缘场景）→ 保留为独立 `P2` 场景，标题 `TC-XXX Bug Regression: {summary}`
+
+**禁止：**
+- 为每个 Bug 单独创建场景（除非无法融入任何主线场景）
+- 在场景中只验证「Bug 不再出现」而不验证正确的业务行为
+
+### Step 3: 场景命名标注
+
+每个场景标题后标注类型标签：
+
+| 标签 | 含义 |
+|------|------|
+| `[CRUD]` | 创建/读取/更新/删除核心流程 |
+| `[Permission]` | 权限控制验证 |
+| `[Cross-Module]` | 跨模块数据同步 |
+| `[Multi-Tenant]` | 多租户隔离 |
+| `[Feature]` | 可配置 Feature |
+| `[Edge]` | 业务边界/异常 |
+
+---
+
+## 三、高价值过滤
 
 ### Layer 1 — 纯 UI 噪音（直接丢弃）
 
@@ -67,49 +93,42 @@
 - dialog 打开/关闭动画 / loading 指示器
 - "can select", "can click", "displays correctly"，"pop up prompts"
 - 排序 / 滚动条 / 工具栏工作正常
-- 输入特殊字符校验（仅前端校验，不涉及后端拒绝）
 
 **Discard unless tied to permission/state:**
 - 按钮 enabled/disabled（除非验证权限）
 - 元素可见/不可见（除非验证权限）
 - 选中/未选中状态（除非验证状态持久化）
 
-### Layer 1.5 — UI 文案禁止直接输出（新增 ⭐）
 
-**绝对禁止输出以下内容作为测试步骤或断言：**
-- 弹出「{exact message}」
-- 显示「{exact warning}」
-- 出现提示：「{exact text}」
-- 警告框内容：「{exact text}」
+## 四、关联验证（轻量级）
 
-**禁止以「UI 文案匹配」作为唯一断言依据。** 每个场景必须验证后端状态或数据持久化。
+不强制要求每个 CUD 操作都有关联验证，但鼓励在以下情况添加：
 
-### Layer 2 — 业务价值保留（P1/P2）
+| 操作 | 建议验证点 |
+|------|-----------|
+| 创建用户/组/角色 | 验证在列表中出现 + 相关引用处可见 |
+| 修改权限 | 验证实际权限生效（登录后访问资源） |
+| 删除资源 | 验证在所有引用处消失 |
 
-保留条件（满足**任一**即保留）：
-
-| 条件 | 典型 Excel 关键词 | 优先级 |
-|------|------------------|--------|
-| 状态持久化 | 刷新后、重新登录后、保存后 | P1 |
-| 权限控制 | 角色、权限、grant、deny、admin | P1 |
-| 多租户隔离 | 组织、tenant、跨组织、security | P1 |
-| 跨模块同步 | EM、Portal、Studio、Monitor、同步 | P1 |
-| 删除影响 | 删除、cascade、阻止删除、依赖 | P1 |
-| 资源归属 | 创建者、所有者、所属、folder | P1 |
-| Bug/Feature 回归 | Bug/Feature #、#Bug/Feature、回归、修复 | P2 |
-| 业务边界 | 特殊字符、空值、重名、超长 | P2 |
-
-### Layer 3 — 可执行性转换
-
-| 模糊表述 | 转换方式 |
-|---------|---------|
-| "work correctly" | 转为「操作成功 + 状态变更可验证」 |
-| "looks correct" | 转为「数据与预期一致」或标记 [NEEDS CLARIFICATION] |
-| "can see" | 转为「元素存在且可见」 |
+**格式：** 需要关联验证时，使用 `**Verify:**` 标注
 
 ---
 
-## 三、安全模式压缩（防止组合爆炸）
+## 五、规则覆盖检查（轻量级）
+
+### Step 1: 规则提取
+
+从 Excel 中提取以下类型的规则：
+- 数据约束（唯一性、必填）
+- 状态流转条件
+- 权限规则（谁能做什么）
+- 级联规则（删除影响）
+
+**不提取**：UI 布局规则、纯前端校验规则。
+
+
+
+## 六、安全模式压缩（防止组合爆炸）
 
 当检测到 security / tenant 变体时：
 
@@ -125,15 +144,16 @@
 
 ---
 
-## 四、跨端同步合并
+## 七、跨端同步合并
 
 检测到多个组件（EM、Portal）时，**合并为 1 个场景**
 
 
 ## Output Format
 
-**Language:** English (all output must be in English)
+**Language:** English
 
+```markdown
 ---
 module: {module name}
 source: {Excel filename}
@@ -165,8 +185,6 @@ last-updated: YYYY-MM-DD
 - **security=true:** {constraints}
 - **multi-tenant:** {isolation rules}
 
-### Known Risks / Special Cases
-- {bugs: Bug #XXXXX, missing assets, edge cases,Features: Feature #XXXXX}
 
 ## Scenario Overview
 
@@ -203,11 +221,23 @@ last-updated: YYYY-MM-DD
 
 ---
 
+## Uncovered Rules
+
+> 以下规则没有对应的 P1/P2 场景覆盖。P3 规则已丢弃。
+
+| Rule ID | Rule Description | Priority | Reason / Suggested Fix |
+|---------|------------------|----------|------------------------|
+| R-001 | {规则原文} | P2 | [NEEDS SCENARIO]: {minimal suggestion} |
+
+---
+
 ## Clarification Needed
 
 | Item | Location | Issue |
 |------|----------|-------|
 | [description] | [sheet/cell] | [what's unclear] |
+
+---
 
 ## Related Module Tests
 
